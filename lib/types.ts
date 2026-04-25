@@ -67,9 +67,28 @@ export type VoiceReport = {
     structure: string;
   }[];
   exampleTweets: string[];
+  ruleEvidence?: {
+    rule: string;
+    confidence: number;
+    evidence: {
+      quote: string;
+      reason: string;
+    }[];
+  }[];
+};
+
+export type SkillRule = {
+  id: string;
+  layer: "identity" | "mechanics" | "context" | "examples" | "feedback";
+  rule: string;
+  confidence: number;
+  supportingExamples: string[];
+  counterExamples: string[];
+  appliesTo: string[];
 };
 
 export type VoiceSkillFile = {
+  schemaVersion?: "2.0";
   version: string;
   brandName: string;
   voiceSummary: string;
@@ -108,6 +127,19 @@ export type VoiceSkillFile = {
     hookQuality: number;
     nonGeneric: number;
     ctaFit: number;
+  };
+  modelNotes?: {
+    preferredQualityModel: string;
+    generatedWith?: string;
+    corpusSampleCount: number;
+  };
+  corpusProfile?: Record<string, unknown>;
+  rules?: SkillRule[];
+  retrievalHints?: {
+    preferredTopics: string[];
+    preferredStructures: string[];
+    preferredVocabulary: string[];
+    avoidVocabulary: string[];
   };
   updatedAt: string;
 };
