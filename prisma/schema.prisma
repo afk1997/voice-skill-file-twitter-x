@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Brand {
+  id                String              @id @default(cuid())
+  name              String
+  twitterHandle     String?
+  website           String?
+  category          String?
+  audience          String?
+  description       String?
+  beliefs           String?
+  avoidSoundingLike String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  uploads        Upload[]
+  contentSamples ContentSample[]
+  voiceReports   VoiceReportRecord[]
+  skillFiles     SkillFile[]
+  generations    Generation[]
+}
+
+model Upload {
+  id            String   @id @default(cuid())
+  brandId       String
+  brand         Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  fileName      String
+  fileType      String
+  status        String
+  totalItems    Int      @default(0)
+  usefulItems   Int      @default(0)
+  excludedItems Int      @default(0)
+  summaryJson   String?
+  createdAt     DateTime @default(now())
+}
+
+model ContentSample {
+  id             String   @id @default(cuid())
+  brandId        String
+  brand          Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  uploadId       String?
+  rawText        String
+  cleanedText    String
+  sourceType     String
+  classification String
+  qualityScore   Int
+  usedForVoice   Boolean  @default(false)
+  metadataJson   String?
+  createdAt      DateTime @default(now())
+
+  @@index([brandId, usedForVoice])
+  @@index([brandId, classification])
+}
+
+model VoiceReportRecord {
+  id         String   @id @default(cuid())
+  brandId    String
+  brand      Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  reportJson String
+  createdAt  DateTime @default(now())
+}
+
+model SkillFile {
+  id        String   @id @default(cuid())
+  brandId   String
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  version   String
+  skillJson String
+  createdAt DateTime @default(now())
+
+  @@index([brandId, createdAt])
+}
+
+model Generation {
+  id         String     @id @default(cuid())
+  brandId    String
+  brand      Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  prompt     String
+  tweetType  String
+  outputText String
+  score      Int
+  scoreLabel String
+  reason     String?
+  issuesJson String?
+  createdAt  DateTime   @default(now())
+
+  feedback Feedback[]
+}
+
+model Feedback {
+  id           String     @id @default(cuid())
+  generationId String
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  label        String
+  comment      String?
+  createdAt    DateTime   @default(now())
+}
+
+model AppSetting {
+  key       String   @id
+  valueJson String
+  updatedAt DateTime @updatedAt
+}
