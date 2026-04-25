@@ -1,0 +1,60 @@
+import { MAX_ANALYSIS_SAMPLES } from "@/lib/constants";
+import { prisma } from "@/lib/db";
+import { providerConfigFromBody, jsonError, jsonOk, parseJsonField, stringifyJsonField } from "@/lib/request";
+import type { VoiceSkillFile } from "@/lib/types";
+import { analyzeVoice } from "@/lib/voice/analyzeVoice";
+import { createVoiceSkillFile } from "@/lib/voice/createSkillFile";
+
+export async function POST(request: Request, { params }: { params: Promise<{ brandId: string }> }) {
+  const { brandId } = await params;
+  const brand = await prisma.brand.findUnique({ where: { id: brandId } });
+  if (!brand) return jsonError("Brand not found.", 404);
+
+  const samples = await prisma.contentSample.findMany({
+    where: { brandId, usedForVoice: true },
+    orderBy: { qualityScore: "desc" },
+    take: MAX_ANALYSIS_SAMPLES,
+    select: { cleanedText: true, qualityScore: true },
+  });
+
+  if (samples.length === 0) {
+    return jsonError("Upload useful writing samples before analyzing voice.", 400);
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const report = await analyzeVoice({
+    brand,
+    samples,
+    providerConfig: providerConfigFromBody(body),
+  });
+
+  await prisma.voiceReportRecord.create({
+    data: { brandId, reportJson: stringifyJsonField(report) },
+  });
+
+  const existingSkillFile = await prisma.skillFile.findFirst({
+    where: { brandId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (existingSkillFile) {
+    return jsonOk({
+      report,
+      skillFile: {
+        ...existingSkillFile,
+        skillJson: parseJsonField<VoiceSkillFile | null>(existingSkillFile.skillJson, null),
+      },
+    });
+  }
+
+  const skillJson = createVoiceSkillFile({ version: "v1.0", brand, report });
+  const skillFile = await prisma.skillFile.create({
+    data: {
+      brandId,
+      version: "v1.0",
+      skillJson: stringifyJsonField(skillJson),
+    },
+  });
+
+  return jsonOk({ report, skillFile: { ...skillFile, skillJson } });
+}

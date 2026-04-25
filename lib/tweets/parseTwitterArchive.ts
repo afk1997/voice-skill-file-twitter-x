@@ -64,8 +64,15 @@ function normalizeTweetObject(item: unknown): ParsedTweet | null {
 }
 
 function parseJsonLike(content: string): ParseResult {
-  const json = JSON.parse(stripTwitterAssignment(content));
-  const items = Array.isArray(json) ? json : Array.isArray(json.tweets) ? json.tweets : Array.isArray(json.data) ? json.data : [json];
+  const json = JSON.parse(stripTwitterAssignment(content)) as unknown;
+  const record = json as Record<string, unknown>;
+  const items: unknown[] = Array.isArray(json)
+    ? json
+    : Array.isArray(record.tweets)
+      ? record.tweets
+      : Array.isArray(record.data)
+        ? record.data
+        : [json];
   const normalized = items.map(normalizeTweetObject).filter((tweet): tweet is ParsedTweet => Boolean(tweet));
   return { tweets: normalized.slice(0, MAX_IMPORT_ITEMS), totalFound: normalized.length };
 }
