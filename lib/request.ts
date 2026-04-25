@@ -9,6 +9,11 @@ export function jsonError(message: string, status = 400, details?: unknown) {
   return NextResponse.json({ error: message, details }, { status });
 }
 
+export function jsonErrorFromUnknown(error: unknown, fallbackMessage: string, status = 500) {
+  const message = error instanceof Error && error.message ? error.message : fallbackMessage;
+  return jsonError(message, status);
+}
+
 export function providerConfigFromBody(body: { providerConfig?: LlmProviderConfig }): LlmProviderConfig {
   const supplied = body.providerConfig ?? {};
   return {

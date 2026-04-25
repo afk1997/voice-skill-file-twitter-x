@@ -1,5 +1,6 @@
 export const MAX_IMPORT_ITEMS = 5000;
 export const MAX_ANALYSIS_SAMPLES = 200;
+export const MAX_LLM_ANALYSIS_SAMPLE_CHARS = 5200;
 
 export const BANNED_AI_PHRASES = [
   "game-changing",

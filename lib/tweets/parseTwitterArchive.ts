@@ -117,32 +117,49 @@ function textTweet(rawText: string, metadata: Record<string, unknown> = {}, crea
   };
 }
 
+function trimEmptyEdges(lines: string[]) {
+  const firstContentLine = lines.findIndex((line) => line.trim().length > 0);
+  if (firstContentLine === -1) return [];
+
+  let lastContentLine = lines.length - 1;
+  while (lastContentLine >= firstContentLine && lines[lastContentLine].trim().length === 0) {
+    lastContentLine -= 1;
+  }
+
+  return lines.slice(firstContentLine, lastContentLine + 1);
+}
+
+function normalizeFormattedLines(lines: string[]) {
+  return trimEmptyEdges(lines)
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function parseTimelineTxt(content: string): ParseResult {
   const blocks = content
     .split(/^\s*_{5,}\s*$/gm)
-    .map((block) => block.trim())
-    .filter(Boolean);
+    .filter((block) => block.trim().length > 0);
 
   const tweets = blocks
     .map((block) => {
-      const lines = block
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
+      const lines = trimEmptyEdges(block.split("\n"));
       if (lines.length === 0) return null;
 
-      const headerMatch = lines[0].match(TXT_DATE_HEADER_PATTERN);
+      const header = lines[0].trim();
+      const headerMatch = header.match(TXT_DATE_HEADER_PATTERN);
       const createdAt = headerMatch?.[1];
       const replyContext = headerMatch?.[2]?.trim();
       const textLines = headerMatch ? lines.slice(1) : lines;
-      const rawText = textLines.join("\n").trim();
+      const rawText = normalizeFormattedLines(textLines);
       if (!rawText) return null;
 
       return textTweet(
         rawText,
         {
           sourceType: "timeline_txt",
-          header: headerMatch ? lines[0] : undefined,
+          header: headerMatch ? header : undefined,
           isReply: Boolean(replyContext?.toLowerCase().includes("reply")),
           replyContext,
         },

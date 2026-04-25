@@ -16,7 +16,13 @@ export function cleanTweet(rawText: string): CleanedTweet {
   );
 
   const withoutUrls = decoded.replace(/https?:\/\/\S+/gi, "").replace(/\bt\.co\/\S+/gi, "");
-  const cleanedText = withoutUrls.replace(/\s+/g, " ").trim();
+  const cleanedText = withoutUrls
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   return {
     rawText,

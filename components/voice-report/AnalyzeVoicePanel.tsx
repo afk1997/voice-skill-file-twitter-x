@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
+import { readApiJson } from "@/lib/http/readApiJson";
 import type { VoiceReport } from "@/lib/types";
 
 function ToneSlider({ label, value }: { label: string; value: number }) {
@@ -69,7 +70,7 @@ export function VoiceReportView({ report }: { report: VoiceReport }) {
         <h2 className="text-xl font-semibold text-ink">Example tweets</h2>
         <div className="mt-3 space-y-2">
           {report.exampleTweets.map((tweet, index) => (
-            <p key={`${tweet}-${index}`} className="rounded-ui bg-panel p-3 text-sm leading-6 text-ink">
+            <p key={`${tweet}-${index}`} className="whitespace-pre-wrap rounded-ui bg-panel p-3 text-sm leading-6 text-ink">
               {tweet}
             </p>
           ))}
@@ -92,13 +93,13 @@ export function AnalyzeVoicePanel({ brandId, initialReport }: { brandId: string;
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ providerConfig: readStoredProviderConfig() }),
     });
-    const json = await response.json();
+    const json = await readApiJson<{ error?: string; report?: VoiceReport }>(response);
     setLoading(false);
     if (!response.ok) {
       setError(json.error || "Could not analyze voice.");
       return;
     }
-    setReport(json.report);
+    if (json.report) setReport(json.report);
   }
 
   return (

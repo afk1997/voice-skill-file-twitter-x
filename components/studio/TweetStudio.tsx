@@ -4,6 +4,7 @@ import { useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { FeedbackButtons } from "@/components/studio/FeedbackButtons";
 import { TWEET_TYPES } from "@/lib/constants";
+import { readApiJson } from "@/lib/http/readApiJson";
 
 type Generation = {
   id: string;
@@ -48,13 +49,13 @@ export function TweetStudio({ brandId }: { brandId: string }) {
         providerConfig: readStoredProviderConfig(),
       }),
     });
-    const json = await response.json();
+    const json = await readApiJson<{ error?: string; generations?: Generation[] }>(response);
     setLoading(false);
     if (!response.ok) {
       setError(json.error || "Could not generate tweets.");
       return;
     }
-    setGenerations(json.generations);
+    setGenerations(json.generations || []);
   }
 
   return (

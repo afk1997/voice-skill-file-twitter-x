@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { readApiJson } from "@/lib/http/readApiJson";
 
 type UploadSummary = {
   totalFound: number;
@@ -23,13 +25,13 @@ export function UploadForm({ brandId }: { brandId: string }) {
     setLoading(true);
     const formData = new FormData(event.currentTarget);
     const response = await fetch(`/api/brands/${brandId}/uploads`, { method: "POST", body: formData });
-    const json = await response.json();
+    const json = await readApiJson<{ error?: string; summary?: UploadSummary }>(response);
     setLoading(false);
     if (!response.ok) {
       setError(json.error || "Could not upload file.");
       return;
     }
-    setSummary(json.summary);
+    setSummary(json.summary || null);
   }
 
   return (
@@ -78,12 +80,22 @@ export function UploadForm({ brandId }: { brandId: string }) {
             ) : (
               <ol className="mt-3 space-y-2">
                 {summary.usefulPreview.map((tweet, index) => (
-                  <li key={`${tweet}-${index}`} className="rounded-ui border border-line bg-white p-3 text-sm leading-6 text-ink">
+                  <li key={`${tweet}-${index}`} className="whitespace-pre-wrap rounded-ui border border-line bg-white p-3 text-sm leading-6 text-ink">
                     {tweet}
                   </li>
                 ))}
               </ol>
             )}
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold text-ink">Next step: analyze the brand voice</h3>
+              <p className="mt-1 text-sm text-muted">Turn these useful samples into a reusable Voice Skill File.</p>
+            </div>
+            <Link href={`/brands/${brandId}/voice-report`} className="rounded-ui bg-ink px-4 py-2 text-center text-sm font-medium text-white">
+              Analyze voice
+            </Link>
           </div>
         </section>
       ) : null}

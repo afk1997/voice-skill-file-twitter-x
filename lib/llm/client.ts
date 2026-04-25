@@ -16,7 +16,25 @@ function envKey(provider?: string) {
 function parseJsonFromModel<T>(text: string): T {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  return JSON.parse(fenced ? fenced[1] : trimmed) as T;
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+
+  try {
+    return JSON.parse(candidate) as T;
+  } catch (error) {
+    const objectStart = candidate.indexOf("{");
+    const objectEnd = candidate.lastIndexOf("}");
+    const arrayStart = candidate.indexOf("[");
+    const arrayEnd = candidate.lastIndexOf("]");
+    const extracted =
+      objectStart > -1 && objectEnd > objectStart
+        ? candidate.slice(objectStart, objectEnd + 1)
+        : arrayStart > -1 && arrayEnd > arrayStart
+          ? candidate.slice(arrayStart, arrayEnd + 1)
+          : "";
+
+    if (extracted) return JSON.parse(extracted) as T;
+    throw error;
+  }
 }
 
 export function hasUsableProvider(config: LlmProviderConfig) {
@@ -62,17 +80,22 @@ export async function generateJsonWithLlm<T>({ providerConfig, prompt }: Generat
     throw new Error("OpenAI-compatible provider requires a base URL.");
   }
 
+  const requestBody: Record<string, unknown> = {
+    model: providerConfig.model || (provider === "openrouter" ? "anthropic/claude-3.5-sonnet" : "gpt-4o-mini"),
+    messages: [{ role: "user", content: prompt }],
+  };
+
+  if (provider !== "openai-compatible") {
+    requestBody.response_format = { type: "json_object" };
+  }
+
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: providerConfig.model || (provider === "openrouter" ? "anthropic/claude-3.5-sonnet" : "gpt-4o-mini"),
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(requestBody),
   });
   if (!response.ok) throw new Error(`${provider} error ${response.status}: ${await response.text()}`);
   const json = await response.json();
