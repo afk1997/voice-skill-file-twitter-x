@@ -1,0 +1,146 @@
+"use client";
+
+import { useState } from "react";
+import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
+import { FeedbackButtons } from "@/components/studio/FeedbackButtons";
+import { TWEET_TYPES } from "@/lib/constants";
+
+type Generation = {
+  id: string;
+  outputText: string;
+  score: number;
+  scoreLabel: string;
+  reason?: string | null;
+  issuesJson?: {
+    issues?: string[];
+    suggestedRevisionDirection?: string;
+  } | null;
+};
+
+function scoreClass(score: number) {
+  if (score >= 90) return "text-good";
+  if (score >= 70) return "text-warn";
+  return "text-weak";
+}
+
+export function TweetStudio({ brandId }: { brandId: string }) {
+  const [context, setContext] = useState("");
+  const [tweetType, setTweetType] = useState<(typeof TWEET_TYPES)[number]>("single tweet");
+  const [variations, setVariations] = useState(5);
+  const [notes, setNotes] = useState("");
+  const [generations, setGenerations] = useState<Generation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setGenerations([]);
+    setLoading(true);
+    const response = await fetch(`/api/brands/${brandId}/generate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        context,
+        tweetType,
+        variations,
+        notes,
+        providerConfig: readStoredProviderConfig(),
+      }),
+    });
+    const json = await response.json();
+    setLoading(false);
+    if (!response.ok) {
+      setError(json.error || "Could not generate tweets.");
+      return;
+    }
+    setGenerations(json.generations);
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
+      <form onSubmit={onSubmit} className="h-fit space-y-5 rounded-ui border border-line bg-white p-5">
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-ink">Raw idea or context</span>
+          <textarea
+            required
+            value={context}
+            onChange={(event) => setContext(event.target.value)}
+            className="min-h-36 w-full rounded-ui border border-line px-3 py-2 text-sm"
+            placeholder="What should the tweet be about?"
+          />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-ink">Tweet type</span>
+          <select value={tweetType} onChange={(event) => setTweetType(event.target.value as (typeof TWEET_TYPES)[number])} className="w-full rounded-ui border border-line px-3 py-2 text-sm">
+            {TWEET_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-ink">Variations</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={variations}
+            onChange={(event) => setVariations(Number(event.target.value))}
+            className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-ink">Optional notes</span>
+          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="min-h-24 w-full rounded-ui border border-line px-3 py-2 text-sm" />
+        </label>
+
+        {error ? <p className="text-sm text-weak">{error}</p> : null}
+
+        <button type="submit" disabled={loading} className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          {loading ? "Generating..." : "Generate tweets"}
+        </button>
+      </form>
+
+      <section className="space-y-4">
+        {generations.length === 0 ? (
+          <div className="rounded-ui border border-line bg-panel p-5">
+            <h2 className="font-semibold text-ink">Generated tweets will appear here</h2>
+            <p className="mt-2 text-sm text-muted">Each draft gets a voice score and feedback loop.</p>
+          </div>
+        ) : (
+          generations.map((generation) => (
+            <article key={generation.id} className="space-y-4 rounded-ui border border-line bg-white p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <p className="whitespace-pre-wrap text-base leading-7 text-ink">{generation.outputText}</p>
+                <div className="shrink-0 rounded-ui bg-panel px-3 py-2 text-right">
+                  <p className={`text-xl font-semibold ${scoreClass(generation.score)}`}>{generation.score}</p>
+                  <p className="text-xs text-muted">{generation.scoreLabel}</p>
+                </div>
+              </div>
+              {generation.reason ? <p className="text-sm text-muted">{generation.reason}</p> : null}
+              {generation.issuesJson?.issues?.length ? (
+                <div>
+                  <p className="text-sm font-medium text-ink">Detected issues</p>
+                  <ul className="mt-1 space-y-1 text-sm text-muted">
+                    {generation.issuesJson.issues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {generation.issuesJson?.suggestedRevisionDirection ? (
+                <p className="text-sm text-muted">Revision direction: {generation.issuesJson.suggestedRevisionDirection}</p>
+              ) : null}
+              <FeedbackButtons generationId={generation.id} />
+            </article>
+          ))
+        )}
+      </section>
+    </div>
+  );
+}
