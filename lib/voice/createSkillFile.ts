@@ -72,7 +72,7 @@ function buildRules(report: VoiceReport, corpusProfile?: CorpusProfile): SkillRu
       confidence: 78,
       supportingExamples: examples.slice(0, 2),
       counterExamples: [],
-      appliesTo: TWEET_TYPES,
+      appliesTo: [...TWEET_TYPES],
     })),
   ];
 

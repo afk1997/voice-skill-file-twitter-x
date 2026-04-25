@@ -44,7 +44,10 @@ export function updateSkillFileFromFeedback({
   label: string;
   comment?: string | null;
 }): VoiceSkillFile {
-  const next: VoiceSkillFile = {
+  const next: VoiceSkillFile & {
+    retrievalHints: NonNullable<VoiceSkillFile["retrievalHints"]>;
+    rules: NonNullable<VoiceSkillFile["rules"]>;
+  } = {
     ...skillFile,
     version: nextVersion,
     linguisticRules: [...skillFile.linguisticRules],
