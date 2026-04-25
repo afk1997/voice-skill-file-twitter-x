@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { FeedbackButtons } from "@/components/studio/FeedbackButtons";
 import { TWEET_TYPES } from "@/lib/constants";
@@ -25,6 +25,8 @@ function scoreClass(score: number) {
 }
 
 export function TweetStudio({ brandId }: { brandId: string }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const contextRef = useRef<HTMLTextAreaElement>(null);
   const [context, setContext] = useState("");
   const [tweetType, setTweetType] = useState<(typeof TWEET_TYPES)[number]>("single tweet");
   const [variations, setVariations] = useState(5);
@@ -58,12 +60,20 @@ export function TweetStudio({ brandId }: { brandId: string }) {
     setGenerations(json.generations || []);
   }
 
+  function prepareNextBatch() {
+    setGenerations([]);
+    setError("");
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => contextRef.current?.focus(), 150);
+  }
+
   return (
     <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
-      <form onSubmit={onSubmit} className="h-fit space-y-5 rounded-ui border border-line bg-white p-5">
+      <form ref={formRef} onSubmit={onSubmit} className="h-fit space-y-5 rounded-ui border border-line bg-white p-5">
         <label className="block space-y-1">
           <span className="text-sm font-medium text-ink">Raw idea or context</span>
           <textarea
+            ref={contextRef}
             required
             value={context}
             onChange={(event) => setContext(event.target.value)}
@@ -137,7 +147,7 @@ export function TweetStudio({ brandId }: { brandId: string }) {
               {generation.issuesJson?.suggestedRevisionDirection ? (
                 <p className="text-sm text-muted">Revision direction: {generation.issuesJson.suggestedRevisionDirection}</p>
               ) : null}
-              <FeedbackButtons generationId={generation.id} />
+              <FeedbackButtons generationId={generation.id} brandId={brandId} onGenerateAnother={prepareNextBatch} />
             </article>
           ))
         )}
