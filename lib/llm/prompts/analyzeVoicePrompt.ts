@@ -16,11 +16,13 @@ export function analyzeVoicePrompt({
   brandName,
   samples,
   corpusStats,
+  corpusProfile,
   analysisMode = "direct",
 }: {
   brandName: string;
   samples: string[];
   corpusStats?: AnalyzeVoicePromptStats;
+  corpusProfile?: unknown;
   analysisMode?: "direct" | "chunk";
 }) {
   return `Analyze the Twitter/X writing voice for ${brandName}.
@@ -66,11 +68,15 @@ Anti-slop rules:
 - Identify mechanics from the samples, not from assumptions.
 - Preserve observations about line breaks, bullets, spacing, and thread formatting.
 - Treat corpus stats as authoritative for mechanics. Use samples for qualitative patterns.
+- Treat the corpus profile as authoritative for distribution, vocabulary, hooks, endings, and formatting evidence.
 - Analysis mode: ${analysisMode}.
 - Treat these as avoided phrases: ${BANNED_AI_PHRASES.join(", ")}.
 
 Corpus stats:
 ${corpusStats ? JSON.stringify(corpusStats, null, 2) : "Not available."}
+
+Corpus profile:
+${corpusProfile ? JSON.stringify(corpusProfile, null, 2) : "Not available."}
 
 Samples:
 ${samples.map((sample, index) => `${index + 1}. ${sample}`).join("\n")}`;

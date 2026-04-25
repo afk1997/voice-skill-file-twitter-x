@@ -11,6 +11,7 @@ import { generateJsonWithLlm, hasUsableProvider } from "@/lib/llm/client";
 import { mockVoiceReport } from "@/lib/llm/mockProvider";
 import { analyzeVoicePrompt } from "@/lib/llm/prompts/analyzeVoicePrompt";
 import type { LlmProviderConfig, VoiceReport } from "@/lib/types";
+import { buildCorpusProfile } from "@/lib/voice/corpusProfile";
 
 type BrandInput = {
   name: string;
@@ -350,6 +351,7 @@ export async function analyzeVoice({
   const strategy = getVoiceAnalysisStrategy(providerConfig);
   const corpusSamples = samples.map((sample) => sample.cleanedText);
   const corpusStats = buildCorpusVoiceStats(corpusSamples);
+  const corpusProfile = buildCorpusProfile(samples);
   const selected = selectAnalysisSamplesForPrompt(
     samples,
     strategy.sampleCharBudget,
@@ -364,7 +366,7 @@ export async function analyzeVoice({
         try {
           const report = await generateJsonWithLlm<VoiceReport>({
             providerConfig,
-            prompt: analyzeVoicePrompt({ brandName: brand.name, samples: chunk, corpusStats, analysisMode: "chunk" }),
+            prompt: analyzeVoicePrompt({ brandName: brand.name, samples: chunk, corpusStats, corpusProfile, analysisMode: "chunk" }),
             repairJson: false,
           });
           reports.push(normalizeVoiceReport(report, chunk, corpusStats));
@@ -378,7 +380,7 @@ export async function analyzeVoice({
 
     const report = await generateJsonWithLlm<VoiceReport>({
       providerConfig,
-      prompt: analyzeVoicePrompt({ brandName: brand.name, samples: selected, corpusStats, analysisMode: "direct" }),
+      prompt: analyzeVoicePrompt({ brandName: brand.name, samples: selected, corpusStats, corpusProfile, analysisMode: "direct" }),
     });
     return normalizeVoiceReport(report, selected, corpusStats);
   }
