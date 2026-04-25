@@ -18,6 +18,7 @@ export async function generateTweets({
   notes,
   skillFile,
   examples,
+  counterExamples = [],
   providerConfig,
 }: {
   context: string;
@@ -26,6 +27,7 @@ export async function generateTweets({
   notes?: string;
   skillFile: VoiceSkillFile;
   examples: string[];
+  counterExamples?: string[];
   providerConfig: LlmProviderConfig;
 }): Promise<GeneratedTweetResult[]> {
   const count = Math.max(1, Math.min(10, variations));
@@ -36,7 +38,7 @@ export async function generateTweets({
 
   const response = await generateJsonWithLlm<{ tweets: LlmTweet[] }>({
     providerConfig,
-    prompt: generateTweetPrompt({ context, tweetType, variations: count, notes, skillFile, examples }),
+    prompt: generateTweetPrompt({ context, tweetType, variations: count, notes, skillFile, examples, counterExamples }),
   });
 
   return response.tweets.slice(0, count).map((tweet) => {

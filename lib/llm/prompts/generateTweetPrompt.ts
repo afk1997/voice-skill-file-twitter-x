@@ -8,6 +8,7 @@ export function generateTweetPrompt({
   notes,
   skillFile,
   examples,
+  counterExamples = [],
 }: {
   context: string;
   tweetType: string;
@@ -15,6 +16,7 @@ export function generateTweetPrompt({
   notes?: string;
   skillFile: VoiceSkillFile;
   examples: string[];
+  counterExamples?: string[];
 }) {
   return `Generate ${variations} Twitter/X draft(s) in the brand voice.
 
@@ -35,6 +37,9 @@ ${JSON.stringify(skillFile, null, 2)}
 
 Relevant examples:
 ${examples.map((example, index) => `${index + 1}. ${example}`).join("\n")}
+
+Counterexamples to avoid:
+${counterExamples.length > 0 ? counterExamples.map((example, index) => `${index + 1}. ${example}`).join("\n") : "None."}
 
 Rules:
 - Be Twitter-native: concise, specific, and natural.

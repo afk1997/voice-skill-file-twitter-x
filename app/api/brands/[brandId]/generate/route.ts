@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { providerConfigFromBody, jsonError, jsonErrorFromUnknown, jsonOk, parseJsonField, stringifyJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
 import { generateTweets } from "@/lib/voice/generateTweets";
+import { selectExamplesForGeneration } from "@/lib/voice/selectExamples";
 
 export async function POST(request: Request, { params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
@@ -26,18 +27,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
   const samples = await prisma.contentSample.findMany({
     where: { brandId, usedForVoice: true },
     orderBy: { qualityScore: "desc" },
-    take: 12,
-    select: { cleanedText: true },
+    take: 500,
+    select: { cleanedText: true, qualityScore: true, classification: true },
   });
 
   try {
+    const selectedExamples = selectExamplesForGeneration({
+      context: body.context,
+      tweetType: body.tweetType || "single tweet",
+      skillFile,
+      samples,
+      limit: 10,
+    });
+
     const results = await generateTweets({
       context: body.context,
       tweetType: body.tweetType || "single tweet",
       variations: Number(body.variations || 3),
       notes: body.notes || "",
       skillFile,
-      examples: samples.map((sample) => sample.cleanedText),
+      examples: selectedExamples.onBrand,
+      counterExamples: selectedExamples.counterExamples,
       providerConfig: providerConfigFromBody(body),
     });
 
