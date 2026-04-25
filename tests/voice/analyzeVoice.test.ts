@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   analyzeVoice,
   buildCorpusVoiceStats,
@@ -10,6 +10,10 @@ import {
 } from "@/lib/voice/analyzeVoice";
 
 describe("analyzeVoice", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("creates a heuristic report without provider credentials", async () => {
     const report = await analyzeVoice({
       brand: { name: "Acme", audience: "founders", beliefs: "specific beats generic" },
@@ -41,10 +45,37 @@ describe("analyzeVoice", () => {
   it("uses chunked analysis only for lower-context models", () => {
     const lowContextStrategy = getVoiceAnalysisStrategy({ provider: "openai-compatible" });
     expect(lowContextStrategy.mode).toBe("chunked");
-    expect(lowContextStrategy.sampleCharBudget).toBeGreaterThan(lowContextStrategy.chunkCharBudget);
-    expect(lowContextStrategy.sampleCharBudget).toBeLessThanOrEqual(lowContextStrategy.chunkCharBudget * 4);
+    expect(lowContextStrategy.maxChunks).toBe(1);
+    expect(lowContextStrategy.sampleCharBudget).toBe(lowContextStrategy.chunkCharBudget);
+    expect(getVoiceAnalysisStrategy({ provider: "openai-compatible", contextWindowTokens: 8192 }).maxChunks).toBe(2);
     expect(getVoiceAnalysisStrategy({ provider: "openai-compatible", contextWindowTokens: 32768 }).mode).toBe("direct");
     expect(getVoiceAnalysisStrategy({ provider: "anthropic" }).mode).toBe("direct");
+  });
+
+  it("falls back to heuristic chunk reports when a low-context local model returns malformed JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("Local model returned malformed JSON.");
+      }),
+    );
+
+    const report = await analyzeVoice({
+      brand: { name: "Local Brand" },
+      samples: [
+        { cleanedText: "Concrete DeFi launch update\nwith preserved formatting and a clear CTA.", qualityScore: 90 },
+        { cleanedText: "Another technical product note with specific language.", qualityScore: 80 },
+      ],
+      providerConfig: {
+        provider: "openai-compatible",
+        baseUrl: "http://localhost:1234/v1",
+        apiKey: "test-key",
+        model: "local-model",
+      },
+    });
+
+    expect(report.summary).toContain("Local Brand");
+    expect(report.exampleTweets.length).toBeGreaterThan(0);
   });
 
   it("splits selected samples into budget-safe chunks", () => {

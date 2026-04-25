@@ -3,6 +3,11 @@ import type { LlmProviderConfig } from "@/lib/types";
 type GenerateJsonInput = {
   providerConfig: LlmProviderConfig;
   prompt: string;
+  repairJson?: boolean;
+};
+
+type GenerateTextInput = GenerateJsonInput & {
+  preferJsonSchema?: boolean;
 };
 
 function envKey(provider?: string) {
@@ -41,7 +46,7 @@ export function hasUsableProvider(config: LlmProviderConfig) {
   return Boolean(config.apiKey || envKey(config.provider));
 }
 
-export async function generateJsonWithLlm<T>({ providerConfig, prompt }: GenerateJsonInput): Promise<T> {
+async function generateTextWithLlm({ providerConfig, prompt, preferJsonSchema = false }: GenerateTextInput) {
   const provider = providerConfig.provider ?? "mock";
   const apiKey = providerConfig.apiKey || envKey(provider);
   if (!apiKey || provider === "mock") {
@@ -66,7 +71,7 @@ export async function generateJsonWithLlm<T>({ providerConfig, prompt }: Generat
     const json = await response.json();
     const text = json.content?.[0]?.text;
     if (!text) throw new Error("Anthropic returned no text content.");
-    return parseJsonFromModel<T>(text);
+    return text as string;
   }
 
   const baseUrl =
@@ -87,6 +92,15 @@ export async function generateJsonWithLlm<T>({ providerConfig, prompt }: Generat
 
   if (provider !== "openai-compatible") {
     requestBody.response_format = { type: "json_object" };
+  } else if (preferJsonSchema) {
+    requestBody.response_format = {
+      type: "json_schema",
+      json_schema: {
+        name: "json_response",
+        schema: { type: "object" },
+        strict: false,
+      },
+    };
   }
 
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
@@ -101,5 +115,43 @@ export async function generateJsonWithLlm<T>({ providerConfig, prompt }: Generat
   const json = await response.json();
   const text = json.choices?.[0]?.message?.content;
   if (!text) throw new Error(`${provider} returned no message content.`);
-  return parseJsonFromModel<T>(text);
+  return text as string;
+}
+
+async function repairJsonWithLlm({
+  providerConfig,
+  invalidJson,
+  errorMessage,
+}: {
+  providerConfig: LlmProviderConfig;
+  invalidJson: string;
+  errorMessage: string;
+}) {
+  return generateTextWithLlm({
+    providerConfig,
+    preferJsonSchema: true,
+    prompt: `Repair this invalid JSON so it can be parsed by JSON.parse.
+
+Return only valid JSON. Do not include markdown, comments, or explanation.
+Preserve the same object shape and values. Do not invent new fields.
+
+Parser error:
+${errorMessage}
+
+Invalid JSON:
+${invalidJson.slice(0, 12000)}`,
+  });
+}
+
+export async function generateJsonWithLlm<T>({ providerConfig, prompt, repairJson = true }: GenerateJsonInput): Promise<T> {
+  const text = await generateTextWithLlm({ providerConfig, prompt });
+
+  try {
+    return parseJsonFromModel<T>(text);
+  } catch (error) {
+    if (!repairJson) throw error;
+    const errorMessage = error instanceof Error ? error.message : "Invalid JSON returned by model.";
+    const repairedText = await repairJsonWithLlm({ providerConfig, invalidJson: text, errorMessage });
+    return parseJsonFromModel<T>(repairedText);
+  }
 }

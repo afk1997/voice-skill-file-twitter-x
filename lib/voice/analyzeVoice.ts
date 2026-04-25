@@ -44,6 +44,7 @@ export type VoiceAnalysisStrategy = {
   contextWindowTokens: number;
   sampleCharBudget: number;
   chunkCharBudget: number;
+  maxChunks: number;
 };
 
 const TONE_KEYS = [
@@ -155,14 +156,16 @@ export function getVoiceAnalysisStrategy(config: LlmProviderConfig): VoiceAnalys
   const mode: VoiceAnalysisMode = contextWindowTokens < HIGH_CONTEXT_ANALYSIS_THRESHOLD_TOKENS ? "chunked" : "direct";
   const directCharBudget = Math.max(4000, Math.min(MAX_DIRECT_ANALYSIS_SAMPLE_CHARS, Math.floor(contextWindowTokens * 1.25)));
   const chunkCharBudget = Math.max(3500, Math.min(MAX_LLM_ANALYSIS_SAMPLE_CHARS, directCharBudget));
+  const maxChunks = mode === "chunked" ? (contextWindowTokens >= 8192 ? 2 : 1) : 1;
   const sampleCharBudget =
-    mode === "chunked" ? Math.min(MAX_CHUNKED_ANALYSIS_SAMPLE_CHARS, Math.max(chunkCharBudget, chunkCharBudget * 4)) : directCharBudget;
+    mode === "chunked" ? Math.min(MAX_CHUNKED_ANALYSIS_SAMPLE_CHARS, Math.max(chunkCharBudget, chunkCharBudget * maxChunks)) : directCharBudget;
 
   return {
     mode,
     contextWindowTokens,
     sampleCharBudget,
     chunkCharBudget,
+    maxChunks,
   };
 }
 
@@ -358,11 +361,16 @@ export async function analyzeVoice({
       const chunks = chunkSamplesForAnalysis(selected, strategy.chunkCharBudget);
 
       for (const chunk of chunks) {
-        const report = await generateJsonWithLlm<VoiceReport>({
-          providerConfig,
-          prompt: analyzeVoicePrompt({ brandName: brand.name, samples: chunk, corpusStats, analysisMode: "chunk" }),
-        });
-        reports.push(normalizeVoiceReport(report, chunk, corpusStats));
+        try {
+          const report = await generateJsonWithLlm<VoiceReport>({
+            providerConfig,
+            prompt: analyzeVoicePrompt({ brandName: brand.name, samples: chunk, corpusStats, analysisMode: "chunk" }),
+            repairJson: false,
+          });
+          reports.push(normalizeVoiceReport(report, chunk, corpusStats));
+        } catch {
+          reports.push(normalizeVoiceReport(mockVoiceReport({ brandName: brand.name, samples: chunk }), chunk, corpusStats));
+        }
       }
 
       return mergeVoiceReports(reports, selected, corpusStats);
