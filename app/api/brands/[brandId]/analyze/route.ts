@@ -1,4 +1,4 @@
-import { MAX_ANALYSIS_SAMPLES } from "@/lib/constants";
+import { MAX_CORPUS_ANALYSIS_SAMPLES } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { providerConfigFromBody, jsonError, jsonErrorFromUnknown, jsonOk, parseJsonField, stringifyJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
@@ -13,7 +13,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
   const samples = await prisma.contentSample.findMany({
     where: { brandId, usedForVoice: true },
     orderBy: { qualityScore: "desc" },
-    take: MAX_ANALYSIS_SAMPLES,
+    take: MAX_CORPUS_ANALYSIS_SAMPLES,
     select: { cleanedText: true, qualityScore: true },
   });
 

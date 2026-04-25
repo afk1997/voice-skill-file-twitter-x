@@ -18,6 +18,7 @@ const DEFAULT_CONFIG: LlmProviderConfig = {
   model: "",
   baseUrl: "",
   apiKey: "",
+  contextWindowTokens: undefined,
 };
 
 export function readStoredProviderConfig(): LlmProviderConfig {
@@ -85,6 +86,20 @@ export function ProviderSettingsForm() {
           className="w-full rounded-ui border border-line px-3 py-2 text-sm"
           placeholder="Only required for OpenAI-compatible providers"
         />
+      </label>
+
+      <label className="block space-y-1">
+        <span className="text-sm font-medium text-ink">Context window tokens</span>
+        <input
+          type="number"
+          min={1024}
+          step={1024}
+          value={config.contextWindowTokens || ""}
+          onChange={(event) => update("contextWindowTokens", event.target.value ? Number(event.target.value) : undefined)}
+          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          placeholder="Optional. LM Studio default is often 4096."
+        />
+        <span className="text-xs text-muted">Leave blank for auto. Use the context size you loaded in your local model settings.</span>
       </label>
 
       <label className="block space-y-1">

@@ -16,11 +16,13 @@ export function jsonErrorFromUnknown(error: unknown, fallbackMessage: string, st
 
 export function providerConfigFromBody(body: { providerConfig?: LlmProviderConfig }): LlmProviderConfig {
   const supplied = body.providerConfig ?? {};
+  const contextWindowTokens = Number(supplied.contextWindowTokens);
   return {
     provider: supplied.provider,
     apiKey: supplied.apiKey,
     model: supplied.model,
     baseUrl: supplied.baseUrl,
+    contextWindowTokens: Number.isFinite(contextWindowTokens) && contextWindowTokens > 0 ? contextWindowTokens : undefined,
   };
 }
 

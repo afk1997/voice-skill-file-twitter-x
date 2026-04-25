@@ -1,6 +1,28 @@
 import { BANNED_AI_PHRASES } from "@/lib/constants";
 
-export function analyzeVoicePrompt({ brandName, samples }: { brandName: string; samples: string[] }) {
+export type AnalyzeVoicePromptStats = {
+  sampleCount: number;
+  averageTweetLength: number;
+  emojiFrequency: string;
+  lineBreakRate: number;
+  sentenceLength: string;
+  punctuationStyle: string;
+  capitalizationStyle: string;
+  firstPersonUsage: string;
+  secondPersonUsage: string;
+};
+
+export function analyzeVoicePrompt({
+  brandName,
+  samples,
+  corpusStats,
+  analysisMode = "direct",
+}: {
+  brandName: string;
+  samples: string[];
+  corpusStats?: AnalyzeVoicePromptStats;
+  analysisMode?: "direct" | "chunk";
+}) {
   return `Analyze the Twitter/X writing voice for ${brandName}.
 
 Return only valid JSON. Do not include markdown or commentary.
@@ -43,7 +65,12 @@ Anti-slop rules:
 - Avoid vague adjectives unless supported by examples.
 - Identify mechanics from the samples, not from assumptions.
 - Preserve observations about line breaks, bullets, spacing, and thread formatting.
+- Treat corpus stats as authoritative for mechanics. Use samples for qualitative patterns.
+- Analysis mode: ${analysisMode}.
 - Treat these as avoided phrases: ${BANNED_AI_PHRASES.join(", ")}.
+
+Corpus stats:
+${corpusStats ? JSON.stringify(corpusStats, null, 2) : "Not available."}
 
 Samples:
 ${samples.map((sample, index) => `${index + 1}. ${sample}`).join("\n")}`;

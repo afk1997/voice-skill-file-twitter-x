@@ -119,6 +119,7 @@ export type LlmProviderConfig = {
   apiKey?: string;
   model?: string;
   baseUrl?: string;
+  contextWindowTokens?: number;
 };
 
 export type GeneratedTweetResult = {
