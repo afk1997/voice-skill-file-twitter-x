@@ -24,6 +24,7 @@ function isPureUrl(text: string) {
 function classifySingle(tweet: ParsedTweet, cleanedText: string, seen: Set<string>): TweetClassification {
   const raw = tweet.rawText.trim();
   const key = duplicateKey(cleanedText);
+  const isReplyMetadata = Boolean((tweet.metadata as { isReply?: unknown } | undefined)?.isReply);
 
   if (/^RT\s+@/i.test(raw)) return "retweet";
   if (isPureUrl(raw) || (cleanedText.length === 0 && /https?:\/\//i.test(raw))) return "link_only";
@@ -33,7 +34,7 @@ function classifySingle(tweet: ParsedTweet, cleanedText: string, seen: Set<strin
   if (AUTOMATION_PATTERNS.some((pattern) => pattern.test(raw))) return "noisy";
   if (BANNED_AI_PHRASES.some((phrase) => cleanedText.toLowerCase().includes(phrase))) return "noisy";
   if (key && seen.has(key)) return "noisy";
-  if (tweet.replyToTweetId || /^@\w+/.test(raw)) return "reply";
+  if (tweet.replyToTweetId || isReplyMetadata || /^@\w+/.test(raw)) return "reply";
   if (/\bquote tweet\b/i.test(raw) || /\bQT\s*@/i.test(raw)) return "quote";
   if (/^\d+\/\d+/.test(raw) || /\bthread\b/i.test(raw)) return "thread_candidate";
   return "useful";
@@ -41,7 +42,7 @@ function classifySingle(tweet: ParsedTweet, cleanedText: string, seen: Set<strin
 
 function scoreTweet(classification: TweetClassification, cleanedText: string, tweet: ParsedTweet) {
   if (classification !== "useful") {
-    return classification === "reply" || classification === "quote" || classification === "thread_candidate" ? 55 : 20;
+    return classification === "reply" || classification === "quote" || classification === "thread_candidate" ? 65 : 20;
   }
 
   let score = 70;
@@ -61,7 +62,7 @@ export function classifyTweets(tweets: ParsedTweet[]): ClassifiedTweet[] {
     const cleaned = cleanTweet(tweet.rawText);
     const key = duplicateKey(cleaned.cleanedText);
     const classification = classifySingle(tweet, cleaned.cleanedText, seen);
-    const usedForVoice = classification === "useful";
+    const usedForVoice = classification === "useful" || classification === "reply" || classification === "quote" || classification === "thread_candidate";
 
     if (usedForVoice && key) {
       seen.add(key);

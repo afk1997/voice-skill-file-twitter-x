@@ -38,6 +38,17 @@ describe("classifyTweets", () => {
     expect(tweet.qualityScore).toBeGreaterThanOrEqual(70);
   });
 
+  it("keeps substantive replies available for voice learning", () => {
+    const [tweet] = classifyTweets([
+      {
+        ...parsed("We're thrilled to support Sonic's ecosystem and introduce efficient liquidity mining on a blockchain designed for the future."),
+        metadata: { isReply: true, replyContext: "reply" },
+      },
+    ]);
+    expect(tweet.classification).toBe("reply");
+    expect(tweet.usedForVoice).toBe(true);
+  });
+
   it("marks duplicate tweets as noisy after the first instance", () => {
     const [first, second] = classifyTweets([
       parsed("Specific examples beat vague advice because they give the reader something to copy."),

@@ -41,4 +41,41 @@ describe("parseTweetTextContent", () => {
     );
     expect(parsed.tweets).toHaveLength(2);
   });
+
+  it("parses underscore-delimited timeline exports as whole tweets", async () => {
+    const parsed = await parseTweetTextContent(
+      "tweets.txt",
+      `Jan 1, 2025
+Sonic Boom!
+
+
+We’re thrilled to announce that Metrom is launching on @SonicLabs!
+
+
+Let’s break it down
+
+
+
+
+________________
+
+
+Jan 1, 2025 (reply)
+We're thrilled to support Sonic's ecosystem and introduce efficient liquidity mining on a blockchain designed for the future.
+Stay tuned for updates.
+________________`,
+    );
+
+    expect(parsed.tweets).toHaveLength(2);
+    expect(parsed.tweets[0].createdAt).toBe("Jan 1, 2025");
+    expect(parsed.tweets[0].rawText).toContain("Sonic Boom!");
+    expect(parsed.tweets[0].rawText).toContain("We’re thrilled to announce");
+    expect(parsed.tweets[0].rawText).not.toContain("Jan 1, 2025");
+    expect(parsed.tweets[0].rawText).not.toContain("________________");
+    expect(parsed.tweets[1].createdAt).toBe("Jan 1, 2025");
+    expect(parsed.tweets[1].metadata).toMatchObject({ isReply: true, replyContext: "reply" });
+    expect(parsed.tweets[1].rawText).toBe(
+      "We're thrilled to support Sonic's ecosystem and introduce efficient liquidity mining on a blockchain designed for the future.\nStay tuned for updates.",
+    );
+  });
 });

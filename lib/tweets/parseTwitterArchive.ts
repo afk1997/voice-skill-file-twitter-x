@@ -93,19 +93,80 @@ function parseCsv(content: string): ParseResult {
   return { tweets: normalized.slice(0, MAX_IMPORT_ITEMS), totalFound: normalized.length };
 }
 
-function parseTxt(content: string): ParseResult {
-  const chunks = content
-    .split(/\n\s*\n/g)
-    .map((chunk) => chunk.trim())
-    .filter(Boolean);
-  const fallback = chunks.length > 1 ? chunks : content.split(/\n/g).map((line) => line.trim()).filter(Boolean);
-  const tweets = fallback.map((rawText) => ({
-    rawText,
+const TXT_SEPARATOR_PATTERN = /^\s*_{5,}\s*$/m;
+const TXT_DATE_HEADER_PATTERN =
+  /^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})(?:\s+\(([^)]+)\))?$/i;
+
+function extractTextMetadata(rawText: string) {
+  return {
     hashtags: Array.from(rawText.matchAll(/#(\w+)/g)).map((match) => match[1]),
     mentions: Array.from(rawText.matchAll(/@(\w+)/g)).map((match) => match[1]),
     urls: Array.from(rawText.matchAll(/https?:\/\/\S+/g)).map((match) => match[0]),
-    metadata: {},
-  }));
+  };
+}
+
+function textTweet(rawText: string, metadata: Record<string, unknown> = {}, createdAt?: string): ParsedTweet {
+  const entities = extractTextMetadata(rawText);
+  return {
+    rawText,
+    createdAt,
+    hashtags: entities.hashtags,
+    mentions: entities.mentions,
+    urls: entities.urls,
+    metadata,
+  };
+}
+
+function parseTimelineTxt(content: string): ParseResult {
+  const blocks = content
+    .split(/^\s*_{5,}\s*$/gm)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  const tweets = blocks
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      if (lines.length === 0) return null;
+
+      const headerMatch = lines[0].match(TXT_DATE_HEADER_PATTERN);
+      const createdAt = headerMatch?.[1];
+      const replyContext = headerMatch?.[2]?.trim();
+      const textLines = headerMatch ? lines.slice(1) : lines;
+      const rawText = textLines.join("\n").trim();
+      if (!rawText) return null;
+
+      return textTweet(
+        rawText,
+        {
+          sourceType: "timeline_txt",
+          header: headerMatch ? lines[0] : undefined,
+          isReply: Boolean(replyContext?.toLowerCase().includes("reply")),
+          replyContext,
+        },
+        createdAt,
+      );
+    })
+    .filter((tweet): tweet is ParsedTweet => Boolean(tweet));
+
+  return { tweets: tweets.slice(0, MAX_IMPORT_ITEMS), totalFound: tweets.length };
+}
+
+function parseTxt(content: string): ParseResult {
+  const normalized = content.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+
+  if (TXT_SEPARATOR_PATTERN.test(normalized)) {
+    return parseTimelineTxt(normalized);
+  }
+
+  const chunks = normalized
+    .split(/\n\s*\n/g)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  const fallback = chunks.length > 1 ? chunks : normalized.split(/\n/g).map((line) => line.trim()).filter(Boolean);
+  const tweets = fallback.map((rawText) => textTweet(rawText));
   return { tweets: tweets.slice(0, MAX_IMPORT_ITEMS), totalFound: tweets.length };
 }
 
