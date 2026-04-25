@@ -1,6 +1,4 @@
-import type { FEEDBACK_LABELS } from "@/lib/constants";
-
-type FeedbackLabel = (typeof FEEDBACK_LABELS)[number];
+import type { FeedbackLabel } from "@/lib/voice/feedbackActions";
 
 type FeedbackOutcome = {
   title: string;
@@ -62,6 +60,11 @@ const OUTCOMES: Partial<Record<FeedbackLabel, FeedbackOutcome>> = {
   "Good tone, weak hook": {
     title: "Hook rule added",
     description: "The Voice Skill File now asks for sharper first lines with clearer claims, contrast, or setup.",
+    primaryAction: "Generate another batch",
+  },
+  "Save note only": {
+    title: "Note saved to Skill File",
+    description: "Your note was saved as a feedback rule without approving or rejecting this draft.",
     primaryAction: "Generate another batch",
   },
 };

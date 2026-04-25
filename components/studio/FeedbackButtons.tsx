@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FEEDBACK_LABELS } from "@/lib/constants";
 import { readApiJson } from "@/lib/http/readApiJson";
+import { FEEDBACK_ACTIONS, NOTE_ONLY_FEEDBACK_LABEL } from "@/lib/voice/feedbackActions";
 
 type FeedbackResult = {
   outcome: {
@@ -51,25 +51,47 @@ export function FeedbackButtons({
   }
 
   return (
-    <div className="space-y-3 border-t border-line pt-4">
-      <textarea
-        value={comment}
-        onChange={(event) => setComment(event.target.value)}
-        className="min-h-16 w-full rounded-ui border border-line px-3 py-2 text-sm"
-        placeholder="Optional note"
-      />
-      <div className="flex flex-wrap gap-2">
-        {FEEDBACK_LABELS.map((label) => (
+    <div className="space-y-4 border-t border-line pt-4">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-ink" htmlFor={`feedback-note-${generationId}`}>
+          Add a note for the Skill File
+        </label>
+        <textarea
+          id={`feedback-note-${generationId}`}
+          value={comment}
+          onChange={(event) => setComment(event.target.value)}
+          className="min-h-20 w-full rounded-ui border border-line px-3 py-2 text-sm"
+          placeholder="Example: Less emoji, mention LPs, replace [link] with the app URL, avoid this phrase..."
+        />
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            key={label}
             type="button"
-            onClick={() => submit(label)}
-            disabled={Boolean(loadingLabel)}
-            className="rounded-ui border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:border-ink disabled:opacity-60"
+            onClick={() => submit(NOTE_ONLY_FEEDBACK_LABEL)}
+            disabled={Boolean(loadingLabel) || !comment.trim()}
+            className="rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
           >
-            {loadingLabel === label ? "Saving..." : label}
+            {loadingLabel === NOTE_ONLY_FEEDBACK_LABEL ? "Saving note..." : "Save note to Skill File"}
           </button>
-        ))}
+          <span className="text-xs text-muted">Or choose one action below; your note will be attached to that action.</span>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm font-medium text-ink">What should change next time?</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {FEEDBACK_ACTIONS.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => submit(action.label)}
+              disabled={Boolean(loadingLabel)}
+              className="rounded-ui border border-line bg-white px-3 py-2 text-left hover:border-ink disabled:opacity-60"
+            >
+              <span className="block text-sm font-medium text-ink">{loadingLabel === action.label ? "Saving..." : action.title}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted">{action.description}</span>
+            </button>
+          ))}
+        </div>
       </div>
       {result ? (
         <div className="rounded-ui border border-line bg-panel p-4">

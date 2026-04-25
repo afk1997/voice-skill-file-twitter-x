@@ -45,4 +45,5 @@ export const FEEDBACK_LABELS = [
   "Wrong vocabulary",
   "Good idea, wrong tone",
   "Good tone, weak hook",
+  "Save note only",
 ] as const;

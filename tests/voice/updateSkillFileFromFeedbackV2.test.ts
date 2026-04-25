@@ -38,4 +38,18 @@ describe("updateSkillFileFromFeedback v2", () => {
     expect(next.retrievalHints?.avoidVocabulary).toContain("seamless liquidity");
     expect(next.rules?.some((rule) => rule.counterExamples.includes("We are excited to announce seamless liquidity."))).toBe(true);
   });
+
+  it("saves note-only feedback without approving or rejecting the generated draft", () => {
+    const next = updateSkillFileFromFeedback({
+      skillFile: base,
+      nextVersion: "v1.1",
+      generatedText: "Solana just got programmable incentives.",
+      label: "Save note only",
+      comment: "Use fewer emojis and mention LPs when relevant.",
+    });
+
+    expect(next.exampleLibrary.approvedGenerated).toEqual([]);
+    expect(next.exampleLibrary.rejectedGenerated).toEqual([]);
+    expect(next.rules?.some((rule) => rule.rule.includes("Use fewer emojis and mention LPs"))).toBe(true);
+  });
 });

@@ -1,4 +1,5 @@
 import type { VoiceSkillFile } from "@/lib/types";
+import { NOTE_ONLY_FEEDBACK_LABEL } from "@/lib/voice/feedbackActions";
 
 function unique(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
@@ -13,6 +14,7 @@ function slug(value: string) {
 }
 
 function feedbackRuleText(label: string, comment?: string | null) {
+  if (label === NOTE_ONLY_FEEDBACK_LABEL) return comment ? `Apply this note when revising future drafts: ${comment}` : "Apply the saved note when revising future drafts.";
   if (label === "Sounds like us") return "Use approved generated examples as positive voice references.";
   if (label === "Too generic") return "Prefer concrete nouns, specific examples, and sharper claims over broad advice.";
   if (label === "Too formal") return "Use plainer, more conversational language without losing clarity.";
@@ -28,7 +30,7 @@ function feedbackRuleText(label: string, comment?: string | null) {
 }
 
 function shouldReject(label: string) {
-  return label !== "Sounds like us";
+  return label !== "Sounds like us" && label !== NOTE_ONLY_FEEDBACK_LABEL;
 }
 
 export function updateSkillFileFromFeedback({
