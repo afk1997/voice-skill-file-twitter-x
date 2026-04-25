@@ -154,6 +154,16 @@ export type LlmProviderConfig = {
   contextWindowTokens?: number;
 };
 
+export type EvaluationComponentScores = {
+  brandVoiceMatch: number;
+  twitterNativeness: number;
+  specificity: number;
+  hookQuality: number;
+  nonGeneric: number;
+  ctaFit: number;
+  safetyFactuality: number;
+};
+
 export type GeneratedTweetResult = {
   id?: string;
   text: string;
@@ -162,4 +172,6 @@ export type GeneratedTweetResult = {
   reason: string;
   issues: string[];
   suggestedRevisionDirection: string;
+  componentScores?: EvaluationComponentScores;
+  shouldShow?: boolean;
 };
