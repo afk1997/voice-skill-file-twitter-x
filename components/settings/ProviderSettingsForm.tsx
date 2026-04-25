@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { defaultModelForProvider, providerModeForConfig } from "@/lib/llm/providerMode";
 import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 
 export const PROVIDER_STORAGE_KEY = "voice-skill-file-provider-config";
@@ -35,6 +36,7 @@ export function readStoredProviderConfig(): LlmProviderConfig {
 export function ProviderSettingsForm() {
   const [config, setConfig] = useState<LlmProviderConfig>(DEFAULT_CONFIG);
   const [saved, setSaved] = useState(false);
+  const mode = providerModeForConfig(config);
 
   useEffect(() => {
     setConfig({ ...DEFAULT_CONFIG, ...readStoredProviderConfig() });
@@ -66,6 +68,9 @@ export function ProviderSettingsForm() {
             </option>
           ))}
         </select>
+        <span className="inline-flex rounded-ui border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">
+          {mode.label}: {mode.description}
+        </span>
       </label>
 
       <label className="block space-y-1">
@@ -74,8 +79,11 @@ export function ProviderSettingsForm() {
           value={config.model || ""}
           onChange={(event) => update("model", event.target.value)}
           className="w-full rounded-ui border border-line px-3 py-2 text-sm"
-          placeholder="claude-3-5-sonnet-latest, gpt-4o-mini, openrouter model..."
+          placeholder={defaultModelForProvider(config.provider) || "Required for OpenAI-compatible local providers"}
         />
+        {config.provider === "anthropic" ? (
+          <span className="text-xs text-muted">Recommended quality model: claude-sonnet-4-6.</span>
+        ) : null}
       </label>
 
       <label className="block space-y-1">

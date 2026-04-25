@@ -1,4 +1,5 @@
 import type { LlmProviderConfig } from "@/lib/types";
+import { defaultModelForProvider } from "@/lib/llm/providerMode";
 
 type GenerateJsonInput = {
   providerConfig: LlmProviderConfig;
@@ -62,7 +63,7 @@ async function generateTextWithLlm({ providerConfig, prompt, preferJsonSchema = 
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: providerConfig.model || "claude-3-5-sonnet-latest",
+        model: providerConfig.model || defaultModelForProvider(provider),
         max_tokens: 3000,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -86,7 +87,7 @@ async function generateTextWithLlm({ providerConfig, prompt, preferJsonSchema = 
   }
 
   const requestBody: Record<string, unknown> = {
-    model: providerConfig.model || (provider === "openrouter" ? "anthropic/claude-3.5-sonnet" : "gpt-4o-mini"),
+    model: providerConfig.model || defaultModelForProvider(provider),
     messages: [{ role: "user", content: prompt }],
   };
 
