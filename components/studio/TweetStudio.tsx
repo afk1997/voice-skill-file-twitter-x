@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { FeedbackButtons } from "@/components/studio/FeedbackButtons";
 import { TWEET_TYPES } from "@/lib/constants";
 import { readApiJson } from "@/lib/http/readApiJson";
+import { candidatePoolSize, providerModeForConfig } from "@/lib/llm/providerMode";
+import type { LlmProviderConfig } from "@/lib/types";
 
 type Generation = {
   id: string;
@@ -32,11 +34,19 @@ export function TweetStudio({ brandId }: { brandId: string }) {
   const [variations, setVariations] = useState(5);
   const [notes, setNotes] = useState("");
   const [generations, setGenerations] = useState<Generation[]>([]);
+  const [providerConfig, setProviderConfig] = useState<LlmProviderConfig>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const mode = providerModeForConfig(providerConfig);
+
+  useEffect(() => {
+    setProviderConfig(readStoredProviderConfig());
+  }, []);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const latestProviderConfig = readStoredProviderConfig();
+    setProviderConfig(latestProviderConfig);
     setError("");
     setGenerations([]);
     setLoading(true);
@@ -48,7 +58,7 @@ export function TweetStudio({ brandId }: { brandId: string }) {
         tweetType,
         variations,
         notes,
-        providerConfig: readStoredProviderConfig(),
+        providerConfig: latestProviderConfig,
       }),
     });
     const json = await readApiJson<{ error?: string; generations?: Generation[] }>(response);
@@ -70,6 +80,12 @@ export function TweetStudio({ brandId }: { brandId: string }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
       <form ref={formRef} onSubmit={onSubmit} className="h-fit space-y-5 rounded-ui border border-line bg-white p-5">
+        <div className="rounded-ui border border-line bg-surface p-3">
+          <p className="text-xs font-semibold uppercase text-muted">Generation Mode</p>
+          <p className="mt-1 text-sm font-medium text-ink">{mode.label}</p>
+          <p className="mt-1 text-xs leading-5 text-muted">{mode.description}</p>
+        </div>
+
         <label className="block space-y-1">
           <span className="text-sm font-medium text-ink">Raw idea or context</span>
           <textarea
@@ -113,15 +129,18 @@ export function TweetStudio({ brandId }: { brandId: string }) {
         {error ? <p className="text-sm text-weak">{error}</p> : null}
 
         <button type="submit" disabled={loading} className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
-          {loading ? "Generating..." : "Generate tweets"}
+          {loading ? "Generating..." : `Generate top ${variations} tweets`}
         </button>
+        <p className="text-xs leading-5 text-muted">
+          The system will draft up to {candidatePoolSize(variations)} candidates internally, score them, and show the strongest {variations}.
+        </p>
       </form>
 
       <section className="space-y-4">
         {generations.length === 0 ? (
           <div className="rounded-ui border border-line bg-panel p-5">
             <h2 className="font-semibold text-ink">Generated tweets will appear here</h2>
-            <p className="mt-2 text-sm text-muted">Each draft gets a voice score and feedback loop.</p>
+            <p className="mt-2 text-sm text-muted">Each draft is retrieved from real examples, scored, reranked, and ready for feedback.</p>
           </div>
         ) : (
           generations.map((generation) => (

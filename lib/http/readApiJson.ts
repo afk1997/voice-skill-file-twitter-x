@@ -5,6 +5,7 @@ type ApiError = {
 export async function readApiJson<T extends ApiError = ApiError>(response: Response): Promise<T> {
   const text = await response.text();
   if (!text.trim()) {
+    if (response.ok) return {} as T;
     return { error: `Request failed with status ${response.status}.` } as T;
   }
 

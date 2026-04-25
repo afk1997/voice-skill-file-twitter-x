@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { readApiJson } from "@/lib/http/readApiJson";
+import { providerModeForConfig } from "@/lib/llm/providerMode";
+import type { LlmProviderConfig } from "@/lib/types";
 import type { VoiceReport } from "@/lib/types";
 
 function ToneSlider({ label, value }: { label: string; value: number }) {
@@ -82,16 +85,24 @@ export function VoiceReportView({ report }: { report: VoiceReport }) {
 
 export function AnalyzeVoicePanel({ brandId, initialReport }: { brandId: string; initialReport: VoiceReport | null }) {
   const [report, setReport] = useState<VoiceReport | null>(initialReport);
+  const [providerConfig, setProviderConfig] = useState<LlmProviderConfig>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const mode = providerModeForConfig(providerConfig);
+
+  useEffect(() => {
+    setProviderConfig(readStoredProviderConfig());
+  }, []);
 
   async function analyze() {
+    const latestProviderConfig = readStoredProviderConfig();
+    setProviderConfig(latestProviderConfig);
     setLoading(true);
     setError("");
     const response = await fetch(`/api/brands/${brandId}/analyze`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ providerConfig: readStoredProviderConfig() }),
+      body: JSON.stringify({ providerConfig: latestProviderConfig }),
     });
     const json = await readApiJson<{ error?: string; report?: VoiceReport }>(response);
     setLoading(false);
@@ -109,6 +120,9 @@ export function AnalyzeVoicePanel({ brandId, initialReport }: { brandId: string;
           <div>
             <h2 className="text-xl font-semibold text-ink">Voice analysis</h2>
             <p className="mt-1 text-sm text-muted">Analyze the best useful samples and create the first Voice Skill File if needed.</p>
+            <p className="mt-2 inline-flex rounded-ui border border-line bg-white px-2 py-1 text-xs font-medium text-muted">
+              {mode.label}: {mode.description}
+            </p>
           </div>
           <button onClick={analyze} disabled={loading} className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
             {loading ? "Analyzing..." : report ? "Re-analyze voice" : "Analyze voice"}
@@ -117,6 +131,16 @@ export function AnalyzeVoicePanel({ brandId, initialReport }: { brandId: string;
         {error ? <p className="mt-3 text-sm text-weak">{error}</p> : null}
       </div>
       {report ? <VoiceReportView report={report} /> : <p className="text-sm text-muted">No report yet.</p>}
+      {report ? (
+        <div className="flex flex-wrap gap-3 rounded-ui border border-line bg-white p-4">
+          <Link href={`/brands/${brandId}/skill-file`} className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white">
+            Review Skill File
+          </Link>
+          <Link href={`/brands/${brandId}/studio`} className="rounded-ui border border-line px-4 py-2 text-sm font-medium text-ink hover:border-ink">
+            Generate Tweets
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

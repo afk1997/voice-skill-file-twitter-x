@@ -22,6 +22,15 @@ export default async function BrandDashboardPage({ params }: { params: Promise<{
   const usefulSamples = await prisma.contentSample.count({ where: { brandId, usedForVoice: true } });
   const latestSkill = brand.skillFiles[0];
   const skillJson = latestSkill ? parseJsonField<VoiceSkillFile | null>(latestSkill.skillJson, null) : null;
+  const nextAction =
+    usefulSamples === 0
+      ? { href: `/brands/${brand.id}/upload`, label: "Upload Content", description: "Add past tweets or writing samples so the system can learn the voice." }
+      : !brand.voiceReports[0]
+        ? { href: `/brands/${brand.id}/voice-report`, label: "Analyze Voice", description: "Turn useful samples into a voice report and first Skill File." }
+        : !skillJson
+          ? { href: `/brands/${brand.id}/skill-file`, label: "Review Skill File", description: "Inspect the generated Voice Skill File before drafting." }
+          : { href: `/brands/${brand.id}/studio`, label: "Open Tweet Studio", description: `Generate with Skill File ${skillJson.version}.` };
+  const workflowStage = skillJson ? "Generate + Learn" : brand.voiceReports[0] ? "Skill File" : usefulSamples > 0 ? "Analyze" : "Upload";
   const actions = [
     { href: `/brands/${brand.id}/upload`, label: "Upload Content" },
     { href: `/brands/${brand.id}/voice-report`, label: "Analyze Voice" },
@@ -62,7 +71,16 @@ export default async function BrandDashboardPage({ params }: { params: Promise<{
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold text-ink">Next actions</h2>
+        <div className="rounded-ui border border-line bg-panel p-5">
+          <p className="text-xs font-semibold uppercase text-muted">Current stage</p>
+          <h2 className="mt-1 text-xl font-semibold text-ink">{workflowStage}</h2>
+          <p className="mt-2 text-sm text-muted">{nextAction.description}</p>
+          <Link href={nextAction.href} className="mt-4 inline-flex rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white">
+            {nextAction.label}
+          </Link>
+        </div>
+
+        <h2 className="mt-6 text-xl font-semibold text-ink">All actions</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           {actions.map((action) => (
             <Link key={action.href} href={action.href} className="rounded-ui border border-line bg-white p-4 text-sm font-medium text-ink hover:border-ink">

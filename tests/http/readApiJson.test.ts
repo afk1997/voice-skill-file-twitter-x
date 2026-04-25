@@ -7,4 +7,8 @@ describe("readApiJson", () => {
 
     await expect(readApiJson(response)).resolves.toEqual({ error: "Request failed with status 500." });
   });
+
+  it("returns an empty object for empty successful responses", async () => {
+    await expect(readApiJson(new Response(""))).resolves.toEqual({});
+  });
 });

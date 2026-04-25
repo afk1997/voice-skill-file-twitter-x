@@ -33,7 +33,12 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
 
       {skillFile ? (
         <div className="space-y-3">
-          <p className="text-sm text-muted">Latest version: <span className="font-medium text-ink">{skillFile.version}</span></p>
+          <div className="flex flex-col gap-3 rounded-ui border border-line bg-panel p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted">Latest version: <span className="font-medium text-ink">{skillFile.version}</span></p>
+            <Link href={`/brands/${brand.id}/studio`} className="rounded-ui bg-ink px-4 py-2 text-center text-sm font-medium text-white">
+              Open Tweet Studio
+            </Link>
+          </div>
           <SkillFileEditor brandId={brand.id} skillFile={skillFile} />
         </div>
       ) : (
