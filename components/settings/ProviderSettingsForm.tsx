@@ -7,7 +7,6 @@ import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 export const PROVIDER_STORAGE_KEY = "voice-skill-file-provider-config";
 
 const PROVIDERS: { value: ProviderName; label: string }[] = [
-  { value: "mock", label: "Mock provider" },
   { value: "anthropic", label: "Anthropic" },
   { value: "openai", label: "OpenAI" },
   { value: "openrouter", label: "OpenRouter" },
@@ -15,19 +14,24 @@ const PROVIDERS: { value: ProviderName; label: string }[] = [
 ];
 
 const DEFAULT_CONFIG: LlmProviderConfig = {
-  provider: "mock",
+  provider: "anthropic",
   model: "",
   baseUrl: "",
   apiKey: "",
   contextWindowTokens: undefined,
 };
 
+function normalizeProviderConfig(value: LlmProviderConfig): LlmProviderConfig {
+  const provider = PROVIDERS.some((option) => option.value === value.provider) ? value.provider : DEFAULT_CONFIG.provider;
+  return { ...value, provider };
+}
+
 export function readStoredProviderConfig(): LlmProviderConfig {
   if (typeof window === "undefined") return {};
   const raw = window.localStorage.getItem(PROVIDER_STORAGE_KEY);
   if (!raw) return {};
   try {
-    return JSON.parse(raw) as LlmProviderConfig;
+    return normalizeProviderConfig(JSON.parse(raw) as LlmProviderConfig);
   } catch {
     return {};
   }
@@ -58,7 +62,7 @@ export function ProviderSettingsForm() {
       <label className="block space-y-1">
         <span className="text-sm font-medium text-ink">Provider</span>
         <select
-          value={config.provider || "mock"}
+          value={config.provider || "anthropic"}
           onChange={(event) => update("provider", event.target.value as ProviderName)}
           className="w-full rounded-ui border border-line px-3 py-2 text-sm"
         >

@@ -1,7 +1,7 @@
 import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 
 export type ProviderMode = {
-  label: "Quality" | "Alternate" | "Local Draft" | "Mock";
+  label: "Setup Required" | "Quality" | "Alternate" | "Local Draft";
   description: string;
   isQualityMode: boolean;
   isLocalDraftMode: boolean;
@@ -12,7 +12,7 @@ export function defaultModelForProvider(provider?: ProviderName) {
   if (provider === "openai") return "gpt-5.4";
   if (provider === "openrouter") return "anthropic/claude-sonnet-4.6";
   if (provider === "openai-compatible") return "";
-  return "mock";
+  return "claude-sonnet-4-6";
 }
 
 export function isLocalBaseUrl(baseUrl?: string) {
@@ -20,10 +20,10 @@ export function isLocalBaseUrl(baseUrl?: string) {
 }
 
 export function providerModeForConfig(config: LlmProviderConfig): ProviderMode {
-  if (!config.provider || config.provider === "mock") {
+  if (!config.provider || !config.apiKey) {
     return {
-      label: "Mock",
-      description: "Mock mode for demos when no model key is configured.",
+      label: "Setup Required",
+      description: "Add a real provider key in Settings, or use .env.local and leave browser settings empty.",
       isQualityMode: false,
       isLocalDraftMode: false,
     };

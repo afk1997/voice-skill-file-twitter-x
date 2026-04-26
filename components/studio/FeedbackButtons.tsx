@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { readApiJson } from "@/lib/http/readApiJson";
-import { FEEDBACK_ACTIONS, NOTE_ONLY_FEEDBACK_LABEL, PRIMARY_FEEDBACK_ACTIONS } from "@/lib/voice/feedbackActions";
+import { FEEDBACK_ACTIONS, NOTE_ONLY_FEEDBACK_LABEL, PRIMARY_FEEDBACK_ACTIONS, REJECT_FEEDBACK_LABEL } from "@/lib/voice/feedbackActions";
 
 type Generation = {
   id: string;
@@ -49,13 +49,14 @@ export function FeedbackButtons({
   onRevisionCreated: (generation: Generation, revisedFromGenerationId: string) => void;
 }) {
   const [comment, setComment] = useState("");
+  const [selectedReason, setSelectedReason] = useState<string>(NOTE_ONLY_FEEDBACK_LABEL);
   const [result, setResult] = useState<FeedbackResult | null>(null);
   const [revisionMessage, setRevisionMessage] = useState("");
   const [error, setError] = useState("");
   const [loadingLabel, setLoadingLabel] = useState("");
   const [revisionLoading, setRevisionLoading] = useState(false);
 
-  async function submit(label: string) {
+  async function submit(label: string, options: { reviseAfter?: boolean } = {}) {
     setError("");
     setResult(null);
     setRevisionMessage("");
@@ -73,6 +74,9 @@ export function FeedbackButtons({
     }
     setResult(json);
     setComment("");
+    if (options.reviseAfter) {
+      await reviseDraft();
+    }
   }
 
   async function reviseDraft() {
@@ -94,7 +98,8 @@ export function FeedbackButtons({
     setRevisionMessage("Revised draft added below this one.");
   }
 
-  const canRevise = Boolean(result && result.outcome.title !== "Approved example saved");
+  const canRevise = Boolean(result && result.outcome.title !== "Approved example saved" && !revisionMessage);
+  const canSaveAndRevise = Boolean(comment.trim() || selectedReason !== NOTE_ONLY_FEEDBACK_LABEL);
   const changedItems = result
     ? [
         ...result.changes.addedRules.map((rule) => `Added rule: ${rule}`),
@@ -106,65 +111,58 @@ export function FeedbackButtons({
 
   return (
     <div className="space-y-4 border-t border-line pt-4">
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-ink" htmlFor={`feedback-note-${generationId}`}>
-          Add a note for the Skill File
+      <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+        <label className="block space-y-2 text-sm font-medium text-ink" htmlFor={`feedback-note-${generationId}`}>
+          <span>What should change?</span>
+          <textarea
+            id={`feedback-note-${generationId}`}
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            className="min-h-20 w-full rounded-ui border border-line px-3 py-2 text-sm font-normal"
+            placeholder="Example: no em dashes, less hype, mention LPs, keep the idea but make it sharper..."
+          />
         </label>
-        <textarea
-          id={`feedback-note-${generationId}`}
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-          className="min-h-20 w-full rounded-ui border border-line px-3 py-2 text-sm"
-          placeholder="Example: Less emoji, mention LPs, replace [link] with the app URL, avoid this phrase..."
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => submit(NOTE_ONLY_FEEDBACK_LABEL)}
-            disabled={Boolean(loadingLabel) || !comment.trim()}
-            className="rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+        <label className="block space-y-2 text-sm font-medium text-ink" htmlFor={`feedback-reason-${generationId}`}>
+          <span>Reason</span>
+          <select
+            id={`feedback-reason-${generationId}`}
+            value={selectedReason}
+            onChange={(event) => setSelectedReason(event.target.value)}
+            className="w-full rounded-ui border border-line px-3 py-2 text-sm font-normal"
           >
-            {loadingLabel === NOTE_ONLY_FEEDBACK_LABEL ? "Saving note..." : "Save note to Skill File"}
+            <option value={NOTE_ONLY_FEEDBACK_LABEL}>Use note only</option>
+            {FEEDBACK_ACTIONS.map((action) => (
+              <option key={action.label} value={action.label}>
+                {action.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => submit(selectedReason, { reviseAfter: true })}
+          disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
+          className="rounded-ui bg-ink px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+        >
+          {loadingLabel || revisionLoading ? "Applying feedback..." : "Save feedback & revise draft"}
+        </button>
+        {PRIMARY_FEEDBACK_ACTIONS.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            onClick={() => submit(action.label)}
+            disabled={Boolean(loadingLabel) || revisionLoading}
+            className="rounded-ui border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink disabled:opacity-60"
+          >
+            {loadingLabel === action.label ? "Saving..." : action.label === REJECT_FEEDBACK_LABEL ? "Reject draft" : "Approve"}
           </button>
-          <span className="text-xs text-muted">This only saves the note. To reject the draft, use Reject draft below.</span>
-        </div>
+        ))}
+        <span className="text-xs leading-5 text-muted">Feedback edits the Skill File first, then revises this draft with the updated rules.</span>
       </div>
 
-      <div>
-        <p className="text-sm font-medium text-ink">Decide what happens to this draft</p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {PRIMARY_FEEDBACK_ACTIONS.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={() => submit(action.label)}
-              disabled={Boolean(loadingLabel)}
-              className="rounded-ui border border-line bg-white px-3 py-2 text-left hover:border-ink disabled:opacity-60"
-            >
-              <span className="block text-sm font-semibold text-ink">{loadingLabel === action.label ? "Saving..." : action.title}</span>
-              <span className="mt-1 block text-xs leading-5 text-muted">{action.description}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="text-sm font-medium text-ink">Or request a specific revision</p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {FEEDBACK_ACTIONS.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={() => submit(action.label)}
-              disabled={Boolean(loadingLabel)}
-              className="rounded-ui border border-line bg-white px-3 py-2 text-left hover:border-ink disabled:opacity-60"
-            >
-              <span className="block text-sm font-medium text-ink">{loadingLabel === action.label ? "Saving..." : action.title}</span>
-              <span className="mt-1 block text-xs leading-5 text-muted">{action.description}</span>
-            </button>
-          ))}
-        </div>
-      </div>
       {result ? (
         <div className="rounded-ui border border-line bg-panel p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -204,12 +202,6 @@ export function FeedbackButtons({
                 className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink"
               >
                 Review skill file
-              </Link>
-              <Link
-                href={`/brands/${result.skillFile.brandId || brandId}`}
-                className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink"
-              >
-                Brand dashboard
               </Link>
             </div>
           </div>

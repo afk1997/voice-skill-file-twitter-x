@@ -144,7 +144,7 @@ export type VoiceSkillFile = {
   updatedAt: string;
 };
 
-export type ProviderName = "mock" | "anthropic" | "openai" | "openrouter" | "openai-compatible";
+export type ProviderName = "anthropic" | "openai" | "openrouter" | "openai-compatible";
 
 export type LlmProviderConfig = {
   provider?: ProviderName;

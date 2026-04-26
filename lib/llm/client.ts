@@ -1,4 +1,4 @@
-import type { LlmProviderConfig } from "@/lib/types";
+import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 import { defaultModelForProvider } from "@/lib/llm/providerMode";
 
 type GenerateJsonInput = {
@@ -17,6 +17,27 @@ function envKey(provider?: string) {
   if (provider === "openrouter") return process.env.OPENROUTER_API_KEY;
   if (provider === "openai-compatible") return process.env.OPENAI_COMPATIBLE_API_KEY;
   return undefined;
+}
+
+function providerFromEnv(): ProviderName | undefined {
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.OPENAI_API_KEY) return "openai";
+  if (process.env.OPENROUTER_API_KEY) return "openrouter";
+  if (process.env.OPENAI_COMPATIBLE_API_KEY) return "openai-compatible";
+  return undefined;
+}
+
+function resolveProvider(config: LlmProviderConfig): ProviderName | undefined {
+  if (
+    config.provider === "anthropic" ||
+    config.provider === "openai" ||
+    config.provider === "openrouter" ||
+    config.provider === "openai-compatible"
+  ) {
+    return config.provider;
+  }
+
+  return providerFromEnv();
 }
 
 function parseJsonFromModel<T>(text: string): T {
@@ -44,14 +65,15 @@ function parseJsonFromModel<T>(text: string): T {
 }
 
 export function hasUsableProvider(config: LlmProviderConfig) {
-  return Boolean(config.apiKey || envKey(config.provider));
+  const provider = resolveProvider(config);
+  return Boolean(provider && (config.apiKey || envKey(provider)));
 }
 
 async function generateTextWithLlm({ providerConfig, prompt, preferJsonSchema = false }: GenerateTextInput) {
-  const provider = providerConfig.provider ?? "mock";
+  const provider = resolveProvider(providerConfig);
   const apiKey = providerConfig.apiKey || envKey(provider);
-  if (!apiKey || provider === "mock") {
-    throw new Error("No usable LLM provider configured.");
+  if (!provider || !apiKey) {
+    throw new Error("A real LLM provider is required. Add a provider key in Settings or .env.local.");
   }
 
   if (provider === "anthropic") {

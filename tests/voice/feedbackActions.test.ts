@@ -7,19 +7,10 @@ describe("feedbackActions", () => {
     expect(PRIMARY_FEEDBACK_ACTIONS.map((action) => action.title)).toEqual(["Approve draft", "Reject draft"]);
   });
 
-  it("uses action-oriented button copy for revision requests instead of raw diagnostic labels", () => {
-    expect(FEEDBACK_ACTIONS.map((action) => action.title)).toEqual([
-      "Make it more specific",
-      "Make it less formal",
-      "Make it more credible",
-      "Reduce sales tone",
-      "Make it less corporate",
-      "Shorten it",
-      "Remove hype",
-      "Fix vocabulary",
-      "Keep idea, change tone",
-      "Keep tone, sharpen hook",
-    ]);
+  it("keeps correction reasons available without making each one a visible primary button", () => {
+    expect(FEEDBACK_ACTIONS).toHaveLength(10);
+    expect(FEEDBACK_ACTIONS.map((action) => action.label)).toContain("Too generic");
+    expect(FEEDBACK_ACTIONS.map((action) => action.label)).toContain("Good tone, weak hook");
   });
 
   it("supports saving a typed note without choosing another feedback action", () => {

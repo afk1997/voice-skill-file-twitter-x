@@ -14,19 +14,17 @@ describe("analyzeVoice", () => {
     vi.unstubAllGlobals();
   });
 
-  it("creates a heuristic report without provider credentials", async () => {
-    const report = await analyzeVoice({
-      brand: { name: "Acme", audience: "founders", beliefs: "specific beats generic" },
-      samples: [
-        { cleanedText: "Specific examples beat vague advice because readers can copy the move.", qualityScore: 90 },
-        { cleanedText: "I trust sharp claims more when they include the tradeoff.", qualityScore: 85 },
-      ],
-      providerConfig: {},
-    });
-
-    expect(report.summary).toContain("Acme");
-    expect(report.exampleTweets).toHaveLength(2);
-    expect(report.linguisticMechanics.averageTweetLength).toBeGreaterThan(20);
+  it("requires a real LLM provider for voice analysis instead of silently returning a placeholder report", async () => {
+    await expect(
+      analyzeVoice({
+        brand: { name: "Acme", audience: "founders", beliefs: "specific beats generic" },
+        samples: [
+          { cleanedText: "Specific examples beat vague advice because readers can copy the move.", qualityScore: 90 },
+          { cleanedText: "I trust sharp claims more when they include the tradeoff.", qualityScore: 85 },
+        ],
+        providerConfig: {},
+      }),
+    ).rejects.toThrow("A real LLM provider is required");
   });
 
   it("caps prompt samples by character budget while preserving quality order", () => {
@@ -52,7 +50,7 @@ describe("analyzeVoice", () => {
     expect(getVoiceAnalysisStrategy({ provider: "anthropic" }).mode).toBe("direct");
   });
 
-  it("falls back to heuristic chunk reports when a low-context local model returns malformed JSON", async () => {
+  it("does not hide low-context model failures behind heuristic reports", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -60,22 +58,21 @@ describe("analyzeVoice", () => {
       }),
     );
 
-    const report = await analyzeVoice({
-      brand: { name: "Local Brand" },
-      samples: [
-        { cleanedText: "Concrete DeFi launch update\nwith preserved formatting and a clear CTA.", qualityScore: 90 },
-        { cleanedText: "Another technical product note with specific language.", qualityScore: 80 },
-      ],
-      providerConfig: {
-        provider: "openai-compatible",
-        baseUrl: "http://localhost:1234/v1",
-        apiKey: "test-key",
-        model: "local-model",
-      },
-    });
-
-    expect(report.summary).toContain("Local Brand");
-    expect(report.exampleTweets.length).toBeGreaterThan(0);
+    await expect(
+      analyzeVoice({
+        brand: { name: "Local Brand" },
+        samples: [
+          { cleanedText: "Concrete DeFi launch update\nwith preserved formatting and a clear CTA.", qualityScore: 90 },
+          { cleanedText: "Another technical product note with specific language.", qualityScore: 80 },
+        ],
+        providerConfig: {
+          provider: "openai-compatible",
+          baseUrl: "http://localhost:1234/v1",
+          apiKey: "test-key",
+          model: "local-model",
+        },
+      }),
+    ).rejects.toThrow("Local model returned malformed JSON.");
   });
 
   it("splits selected samples into budget-safe chunks", () => {

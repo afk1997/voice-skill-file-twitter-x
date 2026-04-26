@@ -1,8 +1,8 @@
 import { generateJsonWithLlm, hasUsableProvider } from "@/lib/llm/client";
-import { mockGeneratedTweets } from "@/lib/llm/mockProvider";
+import { evaluateTweetsPrompt } from "@/lib/llm/prompts/evaluateTweetPrompt";
 import { candidatePoolSize } from "@/lib/llm/providerMode";
 import { generateTweetPrompt } from "@/lib/llm/prompts/generateTweetPrompt";
-import type { GeneratedTweetResult, LlmProviderConfig, VoiceSkillFile } from "@/lib/types";
+import type { EvaluationComponentScores, GeneratedTweetResult, LlmProviderConfig, VoiceSkillFile } from "@/lib/types";
 import { evaluateTweet } from "@/lib/voice/evaluateTweet";
 
 type LlmTweet = {
@@ -10,6 +10,16 @@ type LlmTweet = {
   reason?: string;
   issues?: string[];
   suggestedRevisionDirection?: string;
+};
+
+type LlmEvaluation = {
+  index: number;
+  score: number;
+  componentScores?: EvaluationComponentScores;
+  reason?: string;
+  issues?: string[];
+  suggestedRevisionDirection?: string;
+  shouldShow?: boolean;
 };
 
 export async function generateTweets({
@@ -35,7 +45,7 @@ export async function generateTweets({
   const internalCount = candidatePoolSize(count);
 
   if (!hasUsableProvider(providerConfig)) {
-    return rankTweets(mockGeneratedTweets({ context, tweetType, variations: internalCount, skillFile }), count);
+    throw new Error("A real LLM provider is required. Add a provider key in Settings or .env.local.");
   }
 
   const response = await generateJsonWithLlm<{ tweets: LlmTweet[] }>({
@@ -43,7 +53,7 @@ export async function generateTweets({
     prompt: generateTweetPrompt({ context, tweetType, variations: internalCount, notes, skillFile, examples, counterExamples }),
   });
 
-  return rankTweets(response.tweets.map((tweet) => {
+  const generated = response.tweets.map((tweet) => {
     const evaluation = evaluateTweet({ tweet: tweet.text, context, tweetType, skillFile });
     return {
       text: tweet.text,
@@ -55,7 +65,63 @@ export async function generateTweets({
       componentScores: evaluation.componentScores,
       shouldShow: evaluation.shouldShow,
     };
-  }), count);
+  });
+
+  const llmEvaluated = await evaluateGeneratedTweetsWithLlm({
+    tweets: generated,
+    context,
+    tweetType,
+    skillFile,
+    providerConfig,
+  });
+
+  return rankTweets(llmEvaluated, count);
+}
+
+async function evaluateGeneratedTweetsWithLlm({
+  tweets,
+  context,
+  tweetType,
+  skillFile,
+  providerConfig,
+}: {
+  tweets: GeneratedTweetResult[];
+  context: string;
+  tweetType: string;
+  skillFile: VoiceSkillFile;
+  providerConfig: LlmProviderConfig;
+}) {
+  const response = await generateJsonWithLlm<{ evaluations: LlmEvaluation[] }>({
+    providerConfig,
+    prompt: evaluateTweetsPrompt({ tweets: tweets.map((tweet) => tweet.text), context, tweetType, skillFile }),
+  });
+  const evaluationsByIndex = new Map(response.evaluations.map((evaluation) => [evaluation.index, evaluation]));
+
+  return tweets.map((tweet, index) => {
+    const heuristic = evaluateTweet({ tweet: tweet.text, context, tweetType, skillFile });
+    const llm = evaluationsByIndex.get(index);
+    if (!llm) return tweet;
+
+    const issues = Array.from(new Set([...(llm.issues || []), ...heuristic.issues]));
+    const hasHardIssue = heuristic.shouldShow === false;
+    return {
+      ...tweet,
+      score: Math.max(0, Math.min(100, Math.round(llm.score))),
+      scoreLabel: scoreLabelFromNumber(llm.score),
+      reason: llm.reason || tweet.reason,
+      issues,
+      suggestedRevisionDirection: llm.suggestedRevisionDirection || tweet.suggestedRevisionDirection,
+      componentScores: llm.componentScores || tweet.componentScores,
+      shouldShow: hasHardIssue ? false : llm.shouldShow !== false,
+    };
+  });
+}
+
+function scoreLabelFromNumber(score: number) {
+  if (score >= 90) return "Very strong match";
+  if (score >= 80) return "Strong match";
+  if (score >= 70) return "Good match";
+  return "Weak match";
 }
 
 function rankTweets(tweets: GeneratedTweetResult[], count: number) {

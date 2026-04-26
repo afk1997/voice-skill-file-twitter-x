@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { FeedbackButtons } from "@/components/studio/FeedbackButtons";
@@ -100,6 +101,11 @@ export function TweetStudio({ brandId }: { brandId: string }) {
           <p className="text-xs font-semibold uppercase text-muted">Generation Mode</p>
           <p className="mt-1 text-sm font-medium text-ink">{mode.label}</p>
           <p className="mt-1 text-xs leading-5 text-muted">{mode.description}</p>
+          {mode.label === "Setup Required" ? (
+            <Link href="/settings" className="mt-2 inline-flex rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white">
+              Configure provider
+            </Link>
+          ) : null}
         </div>
 
         <label className="block space-y-1">

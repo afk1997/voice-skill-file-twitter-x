@@ -17,19 +17,17 @@ const skillFile = {
 } as VoiceSkillFile;
 
 describe("generateTweets", () => {
-  it("returns scored mock variations without provider credentials", async () => {
-    const results = await generateTweets({
-      context: "turning archive tweets into a reusable voice file",
-      tweetType: "single tweet",
-      variations: 3,
-      notes: "",
-      skillFile,
-      examples: ["Specific examples beat vague advice because readers can copy the move."],
-      providerConfig: {},
-    });
-
-    expect(results).toHaveLength(3);
-    expect(results[0].text).toContain("voice file");
-    expect(results[0].score).toBeGreaterThan(0);
+  it("requires a real LLM provider instead of silently returning placeholder generations", async () => {
+    await expect(
+      generateTweets({
+        context: "turning archive tweets into a reusable voice file",
+        tweetType: "single tweet",
+        variations: 3,
+        notes: "",
+        skillFile,
+        examples: ["Specific examples beat vague advice because readers can copy the move."],
+        providerConfig: {},
+      }),
+    ).rejects.toThrow("A real LLM provider is required");
   });
 });
