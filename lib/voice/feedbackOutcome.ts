@@ -12,6 +12,11 @@ const OUTCOMES: Partial<Record<FeedbackLabel, FeedbackOutcome>> = {
     description: "This draft was added to approved generated examples in the Voice Skill File.",
     primaryAction: "Generate another batch",
   },
+  "Reject draft": {
+    title: "Draft rejected",
+    description: "This draft was saved as an off-brand counterexample so future generations avoid this direction.",
+    primaryAction: "Generate a better batch",
+  },
   "Too generic": {
     title: "Specificity rule added",
     description: "The Voice Skill File now prefers concrete examples, concrete nouns, and sharper claims.",

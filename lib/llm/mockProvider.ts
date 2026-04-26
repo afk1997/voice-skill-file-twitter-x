@@ -54,9 +54,15 @@ export function mockGeneratedTweets({
   variations: number;
   skillFile: VoiceSkillFile;
 }): GeneratedTweetResult[] {
+  const draftToRevise = context.match(/Draft to revise:\s*([\s\S]*?)(?:\n\nFeedback already applied|\n\nReturn one improved|$)/i)?.[1]?.trim();
+  const hasEmDashBan =
+    skillFile.avoidedPhrases?.includes("—") ||
+    skillFile.linguisticRules?.some((rule) => /do not use em dashes|avoid em dashes/i.test(rule));
+
   return Array.from({ length: variations }).map((_, index) => {
-    const text =
-      index === 0
+    const text = draftToRevise
+      ? reviseMockDraft({ draft: draftToRevise, index, hasEmDashBan })
+      : index === 0
         ? `${context} gets easier when the voice file is specific enough to reject generic drafts.`
         : `${skillFile.brandName} voice rule ${index + 1}: keep the tweet concrete, useful, and close to the source writing.`;
     const evaluation = evaluateTweet({ tweet: text, context, tweetType, skillFile });
@@ -69,4 +75,10 @@ export function mockGeneratedTweets({
       suggestedRevisionDirection: evaluation.suggestedRevisionDirection,
     };
   });
+}
+
+function reviseMockDraft({ draft, index, hasEmDashBan }: { draft: string; index: number; hasEmDashBan: boolean }) {
+  const revised = hasEmDashBan ? draft.replace(/\s*—\s*/g, ", ") : draft;
+  if (index === 0) return revised.replace(/\s+/g, " ").trim();
+  return `${revised.replace(/\s+/g, " ").trim()} Specific beats generic.`;
 }

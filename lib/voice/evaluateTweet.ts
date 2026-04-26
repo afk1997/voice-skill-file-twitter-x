@@ -29,6 +29,14 @@ function contextOverlap(tweet: string, context: string) {
   return count;
 }
 
+function hasLearnedEmDashBan(skillFile: VoiceSkillFile) {
+  return (
+    skillFile.avoidedPhrases?.includes("—") ||
+    skillFile.linguisticRules?.some((rule) => /do not use em dashes|avoid em dashes/i.test(rule)) ||
+    skillFile.rules?.some((rule) => /do not use em dashes|avoid em dashes/i.test(rule.rule))
+  );
+}
+
 function totalScore(componentScores: EvaluationComponentScores) {
   return Object.values(componentScores).reduce((total, score) => total + score, 0);
 }
@@ -69,6 +77,13 @@ export function evaluateTweet({
     componentScores.brandVoiceMatch -= 8;
     componentScores.nonGeneric -= 4;
     issues.push("Sounds like polished generic AI or corporate launch copy");
+  }
+
+  if (hasLearnedEmDashBan(skillFile) && tweet.includes("—")) {
+    componentScores.brandVoiceMatch -= 10;
+    componentScores.twitterNativeness -= 4;
+    componentScores.nonGeneric -= 3;
+    issues.push("Violates learned punctuation rule: do not use em dashes");
   }
 
   if (tweet.length > 280 && tweetType !== "thread") {
@@ -125,7 +140,7 @@ export function evaluateTweet({
   componentScores.safetyFactuality = clamp(componentScores.safetyFactuality, 5);
 
   const bounded = Math.max(0, Math.min(100, totalScore(componentScores)));
-  const hasHardIssue = issues.some((issue) => issue.startsWith("Uses avoided phrase") || issue.includes("corporate launch copy"));
+  const hasHardIssue = issues.some((issue) => issue.startsWith("Uses avoided phrase") || issue.startsWith("Violates learned") || issue.includes("corporate launch copy"));
 
   return {
     score: bounded,

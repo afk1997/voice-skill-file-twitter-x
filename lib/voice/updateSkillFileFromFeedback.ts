@@ -1,5 +1,5 @@
 import type { VoiceSkillFile } from "@/lib/types";
-import { NOTE_ONLY_FEEDBACK_LABEL } from "@/lib/voice/feedbackActions";
+import { compileFeedbackToSkillPatch, type FeedbackSkillPatch } from "@/lib/voice/compileFeedback";
 
 function unique(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
@@ -13,27 +13,7 @@ function slug(value: string) {
     .slice(0, 56);
 }
 
-function feedbackRuleText(label: string, comment?: string | null) {
-  if (label === NOTE_ONLY_FEEDBACK_LABEL) return comment ? `Apply this note when revising future drafts: ${comment}` : "Apply the saved note when revising future drafts.";
-  if (label === "Sounds like us") return "Use approved generated examples as positive voice references.";
-  if (label === "Too generic") return "Prefer concrete nouns, specific examples, and sharper claims over broad advice.";
-  if (label === "Too formal") return "Use plainer, more conversational language without losing clarity.";
-  if (label === "Too casual") return "Preserve credibility and avoid throwaway casual phrasing.";
-  if (label === "Too salesy") return "Lead with evidence, context, or a useful observation before promotion.";
-  if (label === "Too polished") return "Avoid polished corporate announcement language.";
-  if (label === "Too long") return "Compress drafts until every sentence earns its place.";
-  if (label === "Too much hype") return "Remove superlatives, inflated claims, and hype-heavy phrasing.";
-  if (label === "Wrong vocabulary") return `Avoid vocabulary that does not sound like the brand${comment ? `: ${comment}` : "."}`;
-  if (label === "Good idea, wrong tone") return "Keep the idea but revise tone toward approved examples before using it.";
-  if (label === "Good tone, weak hook") return "Strengthen the first line with a sharper claim, contrast, or concrete setup.";
-  return "Apply this feedback when generating future drafts.";
-}
-
-function shouldReject(label: string) {
-  return label !== "Sounds like us" && label !== NOTE_ONLY_FEEDBACK_LABEL;
-}
-
-export function updateSkillFileFromFeedback({
+export function updateSkillFileFromFeedbackWithSummary({
   skillFile,
   nextVersion,
   generatedText,
@@ -45,7 +25,8 @@ export function updateSkillFileFromFeedback({
   generatedText: string;
   label: string;
   comment?: string | null;
-}): VoiceSkillFile {
+}): { skillFile: VoiceSkillFile; changes: FeedbackSkillPatch } {
+  const changes = compileFeedbackToSkillPatch({ label, comment, generatedText });
   const next: VoiceSkillFile & {
     retrievalHints: NonNullable<VoiceSkillFile["retrievalHints"]>;
     rules: NonNullable<VoiceSkillFile["rules"]>;
@@ -71,76 +52,37 @@ export function updateSkillFileFromFeedback({
     updatedAt: new Date().toISOString(),
   };
 
-  if (label === "Sounds like us") {
-    next.exampleLibrary.approvedGenerated = unique([...next.exampleLibrary.approvedGenerated, generatedText]);
-  }
-
-  if (shouldReject(label)) {
-    next.exampleLibrary.rejectedGenerated = unique([...next.exampleLibrary.rejectedGenerated, generatedText]);
-  }
-
-  if (label === "Too generic") {
-    next.linguisticRules.push("Prefer specific examples, concrete nouns, and sharper claims over broad advice.");
-  }
-
-  if (label === "Too polished") {
-    next.linguisticRules.push("Avoid polished corporate announcement language.");
-    next.avoidedPhrases.push("we are excited to announce", "seamless", "game-changing");
-  }
-
-  if (label === "Too formal") {
-    next.linguisticRules.push("Use plainer, more conversational language without losing clarity.");
-  }
-
-  if (label === "Too casual") {
-    next.linguisticRules.push("Preserve credibility and avoid throwaway casual phrasing.");
-  }
-
-  if (label === "Too salesy") {
-    next.linguisticRules.push("Reduce promotional framing and lead with evidence, context, or a useful observation.");
-  }
-
-  if (label === "Too long") {
-    next.linguisticRules.push("Compress drafts until every sentence earns its place.");
-  }
-
-  if (label === "Too much hype") {
-    next.avoidedPhrases.push("revolutionary", "supercharge", "cutting-edge", "unlock the future");
-  }
-
-  if (label === "Wrong vocabulary" && comment) {
-    next.avoidedPhrases.push(comment);
-    next.retrievalHints.avoidVocabulary.push(comment);
-  }
-
-  if (label === "Good idea, wrong tone") {
-    next.exampleLibrary.rejectedGenerated = unique([...next.exampleLibrary.rejectedGenerated, generatedText]);
-    next.linguisticRules.push("Keep the idea but revise tone toward the approved examples before using it.");
-  }
-
-  if (label === "Good tone, weak hook") {
-    next.linguisticRules.push("Strengthen the first line with a sharper claim, contrast, or concrete setup.");
-  }
+  next.linguisticRules.push(...changes.addedRules);
+  next.avoidedPhrases.push(...changes.avoidedPhrases);
+  next.preferredPhrases.push(...changes.preferredPhrases);
+  next.retrievalHints.avoidVocabulary.push(...changes.retrievalAvoidVocabulary, ...changes.avoidedPhrases);
+  next.exampleLibrary.approvedGenerated = unique([...next.exampleLibrary.approvedGenerated, ...changes.approvedExamples]);
+  next.exampleLibrary.rejectedGenerated = unique([...next.exampleLibrary.rejectedGenerated, ...changes.rejectedExamples]);
 
   next.linguisticRules = unique(next.linguisticRules);
   next.avoidedPhrases = unique(next.avoidedPhrases);
+  next.preferredPhrases = unique(next.preferredPhrases);
   next.retrievalHints.preferredTopics = unique(next.retrievalHints.preferredTopics);
   next.retrievalHints.preferredStructures = unique(next.retrievalHints.preferredStructures);
   next.retrievalHints.preferredVocabulary = unique(next.retrievalHints.preferredVocabulary);
   next.retrievalHints.avoidVocabulary = unique(next.retrievalHints.avoidVocabulary);
   next.rules = uniqueRules([
     ...next.rules,
-    {
-      id: `feedback-${slug(label)}-${slug(generatedText).slice(0, 18)}`,
-      layer: "feedback",
-      rule: feedbackRuleText(label, comment),
-      confidence: label === "Sounds like us" ? 86 : 82,
-      supportingExamples: label === "Sounds like us" ? [generatedText] : [],
-      counterExamples: label === "Sounds like us" ? [] : [generatedText],
+    ...changes.addedRules.map((rule) => ({
+      id: `feedback-${slug(label)}-${slug(rule).slice(0, 18)}-${slug(generatedText).slice(0, 12)}`,
+      layer: changes.ruleLayer,
+      rule,
+      confidence: label === "Sounds like us" ? 86 : 84,
+      supportingExamples: changes.approvedExamples,
+      counterExamples: changes.rejectedExamples,
       appliesTo: ["all"],
-    },
+    })),
   ]);
-  return next;
+  return { skillFile: next, changes };
+}
+
+export function updateSkillFileFromFeedback(input: Parameters<typeof updateSkillFileFromFeedbackWithSummary>[0]): VoiceSkillFile {
+  return updateSkillFileFromFeedbackWithSummary(input).skillFile;
 }
 
 function uniqueRules(rules: NonNullable<VoiceSkillFile["rules"]>) {

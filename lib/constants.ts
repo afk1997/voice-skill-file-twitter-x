@@ -35,6 +35,7 @@ export const TWEET_TYPES = [
 
 export const FEEDBACK_LABELS = [
   "Sounds like us",
+  "Reject draft",
   "Too generic",
   "Too formal",
   "Too casual",

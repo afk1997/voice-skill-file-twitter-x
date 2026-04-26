@@ -3,6 +3,7 @@ import type { FEEDBACK_LABELS } from "@/lib/constants";
 export type FeedbackLabel = (typeof FEEDBACK_LABELS)[number];
 
 export const NOTE_ONLY_FEEDBACK_LABEL = "Save note only" satisfies FeedbackLabel;
+export const REJECT_FEEDBACK_LABEL = "Reject draft" satisfies FeedbackLabel;
 
 export type FeedbackAction = {
   label: FeedbackLabel;
@@ -10,12 +11,20 @@ export type FeedbackAction = {
   description: string;
 };
 
-export const FEEDBACK_ACTIONS: FeedbackAction[] = [
+export const PRIMARY_FEEDBACK_ACTIONS: FeedbackAction[] = [
   {
     label: "Sounds like us",
-    title: "Approve voice",
+    title: "Approve draft",
     description: "Teach the Skill File to use this as a positive example.",
   },
+  {
+    label: REJECT_FEEDBACK_LABEL,
+    title: "Reject draft",
+    description: "Teach the Skill File that this draft is off-brand and should be avoided.",
+  },
+];
+
+export const FEEDBACK_ACTIONS: FeedbackAction[] = [
   {
     label: "Too generic",
     title: "Make it more specific",

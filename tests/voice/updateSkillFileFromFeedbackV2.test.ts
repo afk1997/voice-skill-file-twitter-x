@@ -51,5 +51,35 @@ describe("updateSkillFileFromFeedback v2", () => {
     expect(next.exampleLibrary.approvedGenerated).toEqual([]);
     expect(next.exampleLibrary.rejectedGenerated).toEqual([]);
     expect(next.rules?.some((rule) => rule.rule.includes("Use fewer emojis and mention LPs"))).toBe(true);
+    expect(next.rules?.some((rule) => rule.rule.includes("Use fewer emojis") && rule.counterExamples.length === 0)).toBe(true);
+  });
+
+  it("converts natural language note feedback into enforceable mechanics rules", () => {
+    const next = updateSkillFileFromFeedback({
+      skillFile: base,
+      nextVersion: "v1.1",
+      generatedText: "Solana just got programmable incentives — protocols can launch campaigns permissionlessly.",
+      label: "Save note only",
+      comment: "Please don't use em-dashes in our tweets.",
+    });
+
+    expect(next.linguisticRules).toContain("Do not use em dashes in generated tweets. Use commas, periods, colons, or shorter sentences instead.");
+    expect(next.avoidedPhrases).toContain("—");
+    expect(next.rules?.some((rule) => rule.layer === "mechanics" && rule.rule.includes("Do not use em dashes"))).toBe(true);
+    expect(next.exampleLibrary.rejectedGenerated).toEqual([]);
+  });
+
+  it("explicitly rejects a generated draft as a counterexample", () => {
+    const next = updateSkillFileFromFeedback({
+      skillFile: base,
+      nextVersion: "v1.1",
+      generatedText: "Solana just got programmable incentives. 🟣",
+      label: "Reject draft",
+      comment: "This is too thin and too emoji-heavy.",
+    });
+
+    expect(next.exampleLibrary.approvedGenerated).toEqual([]);
+    expect(next.exampleLibrary.rejectedGenerated).toContain("Solana just got programmable incentives. 🟣");
+    expect(next.rules?.some((rule) => rule.rule.includes("Reject drafts like this") && rule.counterExamples.includes("Solana just got programmable incentives. 🟣"))).toBe(true);
   });
 });

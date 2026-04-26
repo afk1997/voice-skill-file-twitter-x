@@ -17,6 +17,7 @@ type Generation = {
   issuesJson?: {
     issues?: string[];
     suggestedRevisionDirection?: string;
+    revisedFromGenerationId?: string;
   } | null;
 };
 
@@ -75,6 +76,21 @@ export function TweetStudio({ brandId }: { brandId: string }) {
     setError("");
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => contextRef.current?.focus(), 150);
+  }
+
+  function addRevisedGeneration(revised: Generation, revisedFromGenerationId: string) {
+    setGenerations((current) => {
+      const next: Generation[] = [];
+      let inserted = false;
+      for (const generation of current) {
+        next.push(generation);
+        if (generation.id === revisedFromGenerationId) {
+          next.push(revised);
+          inserted = true;
+        }
+      }
+      return inserted ? next : [revised, ...current];
+    });
   }
 
   return (
@@ -145,6 +161,9 @@ export function TweetStudio({ brandId }: { brandId: string }) {
         ) : (
           generations.map((generation) => (
             <article key={generation.id} className="space-y-4 rounded-ui border border-line bg-white p-5">
+              {generation.issuesJson?.revisedFromGenerationId ? (
+                <p className="rounded-ui bg-good/10 px-3 py-2 text-xs font-semibold uppercase text-good">Revised with latest Skill File feedback</p>
+              ) : null}
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <p className="whitespace-pre-wrap text-base leading-7 text-ink">{generation.outputText}</p>
                 <div className="shrink-0 rounded-ui bg-panel px-3 py-2 text-right">
@@ -166,7 +185,12 @@ export function TweetStudio({ brandId }: { brandId: string }) {
               {generation.issuesJson?.suggestedRevisionDirection ? (
                 <p className="text-sm text-muted">Revision direction: {generation.issuesJson.suggestedRevisionDirection}</p>
               ) : null}
-              <FeedbackButtons generationId={generation.id} brandId={brandId} onGenerateAnother={prepareNextBatch} />
+              <FeedbackButtons
+                generationId={generation.id}
+                brandId={brandId}
+                onGenerateAnother={prepareNextBatch}
+                onRevisionCreated={addRevisedGeneration}
+              />
             </article>
           ))
         )}

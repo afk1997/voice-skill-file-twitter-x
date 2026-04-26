@@ -35,4 +35,23 @@ describe("evaluateTweet v2", () => {
     expect(result.componentScores.specificity).toBeGreaterThan(10);
     expect(result.shouldShow).toBe(true);
   });
+
+  it("enforces learned punctuation constraints from the skill file", () => {
+    const result = evaluateTweet({
+      tweet: "Solana rewards are live — set targets and only pay for liquidity that hits them.",
+      context: "Solana rewards launch",
+      tweetType: "single tweet",
+      skillFile: {
+        ...skillFile,
+        avoidedPhrases: ["—"],
+        linguisticRules: [
+          ...skillFile.linguisticRules,
+          "Do not use em dashes in generated tweets. Use commas, periods, colons, or shorter sentences instead.",
+        ],
+      },
+    });
+
+    expect(result.issues).toContain("Violates learned punctuation rule: do not use em dashes");
+    expect(result.shouldShow).toBe(false);
+  });
 });
