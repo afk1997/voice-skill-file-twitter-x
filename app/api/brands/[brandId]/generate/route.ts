@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { providerConfigFromBody, jsonError, jsonErrorFromUnknown, jsonOk, parseJsonField, stringifyJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
 import { generateTweets } from "@/lib/voice/generateTweets";
-import { selectExamplesForGeneration } from "@/lib/voice/selectExamples";
+import { selectHybridExamplesForGeneration } from "@/lib/voice/hybridRetrieval";
 
 export async function POST(request: Request, { params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
@@ -28,16 +28,38 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
     where: { brandId, usedForVoice: true },
     orderBy: { qualityScore: "desc" },
     take: 500,
-    select: { cleanedText: true, qualityScore: true, classification: true },
+    select: {
+      id: true,
+      cleanedText: true,
+      qualityScore: true,
+      classification: true,
+      embeddingJson: true,
+      embeddingModel: true,
+      embeddingHash: true,
+    },
   });
 
   try {
-    const selectedExamples = selectExamplesForGeneration({
+    const providerConfig = providerConfigFromBody(body);
+    const selectedExamples = await selectHybridExamplesForGeneration({
       context: body.context,
       tweetType: body.tweetType || "single tweet",
+      notes: body.notes || "",
       skillFile,
       samples,
       limit: 10,
+      providerConfig,
+      saveEmbedding: async (sampleId, embedding) => {
+        await prisma.contentSample.update({
+          where: { id: sampleId },
+          data: {
+            embeddingJson: embedding.embeddingJson,
+            embeddingModel: embedding.embeddingModel,
+            embeddingHash: embedding.embeddingHash,
+            embeddedAt: embedding.embeddedAt,
+          },
+        });
+      },
     });
 
     const results = await generateTweets({
@@ -48,7 +70,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
       skillFile,
       examples: selectedExamples.onBrand,
       counterExamples: selectedExamples.counterExamples,
-      providerConfig: providerConfigFromBody(body),
+      providerConfig,
+      retrievalMode: selectedExamples.retrievalMode,
     });
 
     const generations = await Promise.all(
@@ -56,6 +79,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
         const issuesJson = {
           issues: result.issues,
           suggestedRevisionDirection: result.suggestedRevisionDirection,
+          componentScores: result.componentScores,
+          styleDistance: result.evaluationMetadata?.styleDistance,
+          provenance: result.evaluationMetadata?.provenance,
+          retryCount: result.evaluationMetadata?.retryCount ?? 0,
         };
         const generation = await prisma.generation.create({
           data: {

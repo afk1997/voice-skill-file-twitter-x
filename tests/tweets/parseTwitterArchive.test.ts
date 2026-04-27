@@ -77,4 +77,20 @@ ________________`,
       "We're thrilled to support Sonic's ecosystem and introduce efficient liquidity mining on a blockchain designed for the future.\nStay tuned for updates.",
     );
   });
+
+  it("strips inline timeline reply headers from tweet text", async () => {
+    const parsed = await parseTweetTextContent(
+      "tweets.txt",
+      "Sep 9, 2025 (reply to @metromxyz @TheZKNation and @zksync) KPI based incentives are beneficial for Protocols & LPs alike!",
+    );
+
+    expect(parsed.tweets).toHaveLength(1);
+    expect(parsed.tweets[0].createdAt).toBe("Sep 9, 2025");
+    expect(parsed.tweets[0].metadata).toMatchObject({
+      isReply: true,
+      replyContext: "reply to @metromxyz @TheZKNation and @zksync",
+    });
+    expect(parsed.tweets[0].rawText).toBe("KPI based incentives are beneficial for Protocols & LPs alike!");
+    expect(parsed.tweets[0].rawText).not.toContain("reply to @");
+  });
 });

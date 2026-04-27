@@ -96,6 +96,8 @@ function parseCsv(content: string): ParseResult {
 const TXT_SEPARATOR_PATTERN = /^\s*_{5,}\s*$/m;
 const TXT_DATE_HEADER_PATTERN =
   /^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})(?:\s+\(([^)]+)\))?$/i;
+const TXT_INLINE_DATE_HEADER_PATTERN =
+  /^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})(?:\s+\(([^)]+)\))?\s+([\s\S]+)$/i;
 
 function extractTextMetadata(rawText: string) {
   return {
@@ -105,15 +107,25 @@ function extractTextMetadata(rawText: string) {
   };
 }
 
-function textTweet(rawText: string, metadata: Record<string, unknown> = {}, createdAt?: string): ParsedTweet {
-  const entities = extractTextMetadata(rawText);
+function timelineMetadata(replyContext?: string) {
   return {
-    rawText,
-    createdAt,
+    isReply: Boolean(replyContext?.toLowerCase().includes("reply")),
+    replyContext,
+  };
+}
+
+function textTweet(rawText: string, metadata: Record<string, unknown> = {}, createdAt?: string): ParsedTweet {
+  const inlineHeader = createdAt ? undefined : rawText.trim().match(TXT_INLINE_DATE_HEADER_PATTERN);
+  const text = inlineHeader ? inlineHeader[3].trim() : rawText;
+  const inlineMetadata = inlineHeader ? { header: inlineHeader[0], ...timelineMetadata(inlineHeader[2]?.trim()) } : {};
+  const entities = extractTextMetadata(text);
+  return {
+    rawText: text,
+    createdAt: createdAt ?? inlineHeader?.[1],
     hashtags: entities.hashtags,
     mentions: entities.mentions,
     urls: entities.urls,
-    metadata,
+    metadata: { ...metadata, ...inlineMetadata },
   };
 }
 
@@ -160,8 +172,7 @@ function parseTimelineTxt(content: string): ParseResult {
         {
           sourceType: "timeline_txt",
           header: headerMatch ? header : undefined,
-          isReply: Boolean(replyContext?.toLowerCase().includes("reply")),
-          replyContext,
+          ...timelineMetadata(replyContext),
         },
         createdAt,
       );

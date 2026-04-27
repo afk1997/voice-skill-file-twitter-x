@@ -40,6 +40,22 @@ describe("analyzeVoice", () => {
     expect(selected).toEqual(["highest quality line with enough detail", "second best sample with detail"]);
   });
 
+  it("keeps the analysis packet diverse instead of filling it with near duplicates", () => {
+    const selected = selectAnalysisSamplesForPrompt(
+      [
+        { cleanedText: "KPI incentives reward outcomes, not raw deposits.", qualityScore: 99 },
+        { cleanedText: "KPI incentives reward outcomes, not raw deposits.", qualityScore: 98 },
+        { cleanedText: "KPI incentives reward outcomes, not raw deposits.", qualityScore: 97 },
+        { cleanedText: "LPs understand campaigns when the action is concrete.", qualityScore: 75 },
+      ],
+      240,
+    );
+
+    expect(selected).toContain("KPI incentives reward outcomes, not raw deposits.");
+    expect(selected).toContain("LPs understand campaigns when the action is concrete.");
+    expect(selected.filter((sample) => sample.includes("raw deposits"))).toHaveLength(1);
+  });
+
   it("uses chunked analysis only for lower-context models", () => {
     const lowContextStrategy = getVoiceAnalysisStrategy({ provider: "openai-compatible" });
     expect(lowContextStrategy.mode).toBe("chunked");
@@ -120,6 +136,18 @@ describe("analyzeVoice", () => {
         avoidedPhrases: ["generic"],
         contentPatterns: [{ name: "Update", description: "Status", structure: "Hook + list" }],
         exampleTweets: ["Hello\nworld"],
+        ruleEvidence: [
+          {
+            rule: "Lead with the specific product mechanic.",
+            confidence: "91",
+            evidence: [
+              {
+                quote: "DeFi rewards work when the next action is obvious.",
+                reason: "Specific mechanism appears before commentary.",
+              },
+            ],
+          },
+        ],
       },
       ["one", "two longer sample"],
     );
@@ -128,6 +156,16 @@ describe("analyzeVoice", () => {
     expect(report.linguisticMechanics.averageTweetLength).toBe(10);
     expect(report.linguisticMechanics.sentenceLength).toBe("mixed");
     expect(report.linguisticMechanics.emojiFrequency).toBe("high");
+    expect(report.ruleEvidence?.[0]).toEqual({
+      rule: "Lead with the specific product mechanic.",
+      confidence: 91,
+      evidence: [
+        {
+          quote: "DeFi rewards work when the next action is obvious.",
+          reason: "Specific mechanism appears before commentary.",
+        },
+      ],
+    });
   });
 
   it("merges chunk reports while keeping corpus-derived mechanics authoritative", () => {
@@ -169,5 +207,41 @@ describe("analyzeVoice", () => {
     expect(merged.personalityTraits).toContain("direct");
     expect(merged.linguisticMechanics.usesEmojis).toBe(true);
     expect(merged.linguisticMechanics.lineBreakStyle).toContain("line breaks");
+  });
+
+  it("merges rule evidence from chunk reports", () => {
+    const first = normalizeVoiceReport(
+      {
+        summary: "Chunk one.",
+        ruleEvidence: [
+          {
+            rule: "Open with a concrete mechanic.",
+            confidence: 88,
+            evidence: [{ quote: "Deposits matter less than outcomes.", reason: "Mechanic first." }],
+          },
+        ],
+      },
+      ["Deposits matter less than outcomes."],
+    );
+    const second = normalizeVoiceReport(
+      {
+        summary: "Chunk two.",
+        ruleEvidence: [
+          {
+            rule: "Avoid polished launch language.",
+            confidence: 83,
+            evidence: [{ quote: "No spreadsheet required.", reason: "Plain spoken closer." }],
+          },
+        ],
+      },
+      ["No spreadsheet required."],
+    );
+
+    const merged = mergeVoiceReports([first, second], ["Deposits matter less than outcomes.", "No spreadsheet required."]);
+
+    expect(merged.ruleEvidence?.map((item) => item.rule)).toEqual([
+      "Open with a concrete mechanic.",
+      "Avoid polished launch language.",
+    ]);
   });
 });

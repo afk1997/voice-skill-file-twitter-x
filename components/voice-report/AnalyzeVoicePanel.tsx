@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { readApiJson } from "@/lib/http/readApiJson";
 import { providerModeForConfig } from "@/lib/llm/providerMode";
-import type { LlmProviderConfig } from "@/lib/types";
+import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 import type { VoiceReport } from "@/lib/types";
 
 function ToneSlider({ label, value }: { label: string; value: number }) {
@@ -69,6 +69,30 @@ export function VoiceReportView({ report }: { report: VoiceReport }) {
         ))}
       </section>
 
+      {report.ruleEvidence?.length ? (
+        <section className="rounded-ui border border-line bg-white p-5">
+          <h2 className="text-xl font-semibold text-ink">Evidence-backed rules</h2>
+          <div className="mt-4 space-y-4">
+            {report.ruleEvidence.map((item) => (
+              <div key={item.rule} className="border-t border-line pt-4 first:border-t-0 first:pt-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-ink">{item.rule}</h3>
+                  <span className="text-xs font-medium text-muted">{item.confidence}% confidence</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {item.evidence.map((evidence) => (
+                    <div key={`${item.rule}-${evidence.quote}`} className="rounded-ui bg-panel p-3">
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-ink">{evidence.quote}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted">{evidence.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-ui border border-line bg-white p-5">
         <h2 className="text-xl font-semibold text-ink">Example tweets</h2>
         <div className="mt-3 space-y-2">
@@ -86,12 +110,17 @@ export function VoiceReportView({ report }: { report: VoiceReport }) {
 export function AnalyzeVoicePanel({ brandId, initialReport }: { brandId: string; initialReport: VoiceReport | null }) {
   const [report, setReport] = useState<VoiceReport | null>(initialReport);
   const [providerConfig, setProviderConfig] = useState<LlmProviderConfig>({});
+  const [serverProvider, setServerProvider] = useState<ProviderName | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const mode = providerModeForConfig(providerConfig);
+  const mode = providerModeForConfig(providerConfig, { serverProvider });
 
   useEffect(() => {
     setProviderConfig(readStoredProviderConfig());
+    fetch("/api/provider-status")
+      .then((response) => readApiJson<{ error?: string; provider?: ProviderName }>(response))
+      .then((status) => setServerProvider(status.provider))
+      .catch(() => setServerProvider(undefined));
   }, []);
 
   async function analyze() {

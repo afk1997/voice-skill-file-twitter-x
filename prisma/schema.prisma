@@ -53,10 +53,15 @@ model ContentSample {
   qualityScore   Int
   usedForVoice   Boolean  @default(false)
   metadataJson   String?
+  embeddingJson  String?
+  embeddingModel String?
+  embeddingHash  String?
+  embeddedAt     DateTime?
   createdAt      DateTime @default(now())
 
   @@index([brandId, usedForVoice])
   @@index([brandId, classification])
+  @@index([brandId, embeddingModel])
 }
 
 model VoiceReportRecord {

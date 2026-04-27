@@ -4,6 +4,8 @@ import { SkillFileEditor } from "@/components/skill-file/SkillFileEditor";
 import { prisma } from "@/lib/db";
 import { parseJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
+import { diffSkillFiles } from "@/lib/voice/skillFileDiff";
+import { getSkillFileHealth } from "@/lib/voice/skillFileHealth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +13,21 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
   const { brandId } = await params;
   const brand = await prisma.brand.findUnique({
     where: { id: brandId },
-    include: { skillFiles: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { skillFiles: { orderBy: { createdAt: "desc" }, take: 2 } },
   });
   if (!brand) notFound();
 
   const latest = brand.skillFiles[0];
+  const previous = brand.skillFiles[1];
   const skillFile = latest ? parseJsonField<VoiceSkillFile | null>(latest.skillJson, null) : null;
+  const previousSkillFile = previous ? parseJsonField<VoiceSkillFile | null>(previous.skillJson, null) : null;
+  const versionDiff = skillFile && previousSkillFile ? diffSkillFiles({ previous: previousSkillFile, current: skillFile }) : null;
+  const usefulSampleCount = await prisma.contentSample.count({ where: { brandId, usedForVoice: true } });
+  const skillHealth = getSkillFileHealth({
+    skillFile,
+    usefulSampleCount,
+    skillCreatedAt: latest?.createdAt,
+  });
 
   return (
     <div className="space-y-8">
@@ -34,12 +45,17 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
       {skillFile ? (
         <div className="space-y-3">
           <div className="flex flex-col gap-3 rounded-ui border border-line bg-panel p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted">Latest version: <span className="font-medium text-ink">{skillFile.version}</span></p>
+            <div>
+              <p className="text-sm text-muted">Latest version: <span className="font-medium text-ink">{skillFile.version}</span></p>
+              <p className="mt-1 text-sm text-muted">
+                Voice health: <span className="font-medium text-ink">{skillHealth.label}</span> · {skillHealth.corpusSampleCount.toLocaleString()} corpus samples
+              </p>
+            </div>
             <Link href={`/brands/${brand.id}/studio`} className="rounded-ui bg-ink px-4 py-2 text-center text-sm font-medium text-white">
               Open Tweet Studio
             </Link>
           </div>
-          <SkillFileEditor brandId={brand.id} skillFile={skillFile} />
+          <SkillFileEditor brandId={brand.id} skillFile={skillFile} versionDiff={versionDiff} />
         </div>
       ) : (
         <div className="rounded-ui border border-line bg-panel p-5">

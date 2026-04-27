@@ -4,6 +4,7 @@ import { generateJsonWithLlm } from "@/lib/llm/client";
 describe("generateJsonWithLlm", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it("does not send OpenAI json_object response_format to OpenAI-compatible providers", async () => {
@@ -108,5 +109,34 @@ describe("generateJsonWithLlm", () => {
       }),
     ).rejects.toThrow("Expected ',' or '}'");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a blank selected provider defer to the configured server provider", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "server-openai-key");
+
+    let requestedUrl: string | undefined;
+    let requestBody: Record<string, unknown> | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        requestedUrl = String(url);
+        requestBody = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({ choices: [{ message: { content: "{\"ok\":true}" } }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+
+    await expect(
+      generateJsonWithLlm<{ ok: boolean }>({
+        providerConfig: { provider: "anthropic" },
+        prompt: "Return JSON.",
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(requestedUrl).toBe("https://api.openai.com/v1/chat/completions");
+    expect(requestBody?.model).toBe("gpt-5.4");
   });
 });

@@ -16,6 +16,8 @@ describe("buildCorpusProfile", () => {
     expect(profile.formatting.commonLineBreakTemplates[0]).toContain("<blank>");
     expect(profile.representativeExamples[0].text).toContain("\n\n");
     expect(profile.vocabulary.topTerms.length).toBeGreaterThan(0);
+    expect(profile.stylometry.averageWordCount).toBeGreaterThan(0);
+    expect(profile.stylometry.topCharacterTrigrams.length).toBeGreaterThan(0);
   });
 
   it("extracts hooks, endings, and recurring phrases", () => {
@@ -28,5 +30,15 @@ describe("buildCorpusProfile", () => {
     expect(profile.hooks[0]).toContain("DeFi incentives");
     expect(profile.endings.length).toBeGreaterThan(0);
     expect(profile.vocabulary.topPhrases.some((phrase) => phrase.text.includes("defi incentives"))).toBe(true);
+  });
+
+  it("does not learn replies as opening hooks", () => {
+    const profile = buildCorpusProfile([
+      { cleanedText: "KPI-based incentives work when campaigns reward outcomes.", qualityScore: 95, classification: "useful" },
+      { cleanedText: "reply to @metromxyz KPI based incentives are beneficial for protocols.", qualityScore: 90, classification: "reply" },
+    ]);
+
+    expect(profile.hooks).toContain("KPI-based incentives work when campaigns reward outcomes");
+    expect(profile.hooks.some((hook) => hook.toLowerCase().includes("reply to @"))).toBe(false);
   });
 });

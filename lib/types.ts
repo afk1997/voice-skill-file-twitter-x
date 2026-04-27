@@ -87,6 +87,46 @@ export type SkillRule = {
   appliesTo: string[];
 };
 
+export type VoiceKernel = {
+  sampleCount: number;
+  length: {
+    idealRange: [number, number];
+    median: number;
+    p90: number;
+    band: "short" | "medium" | "long" | "mixed";
+  };
+  formatting: {
+    lineBreakRate: number;
+    commonLineBreakTemplates: string[];
+    emojiFrequency: "none" | "low" | "medium" | "high";
+    commonEmojis: string[];
+    hashtagRate: number;
+    mentionRate: number;
+    urlRate: number;
+  };
+  rhythm: {
+    openingPatterns: string[];
+    endingPatterns: string[];
+    punctuationHabit: string;
+    capitalizationHabit: string;
+    firstPersonRate: number;
+    secondPersonRate: number;
+  };
+  vocabulary: {
+    preferredTerms: string[];
+    preferredPhrases: string[];
+    forbiddenModelDefaults: string[];
+  };
+  stylometry?: {
+    topCharacterTrigrams: string[];
+    punctuationDensity: number;
+    averageWordCount: number;
+    questionRate: number;
+    exclamationRate: number;
+  };
+  generationRules: string[];
+};
+
 export type VoiceSkillFile = {
   schemaVersion?: "2.0";
   version: string;
@@ -134,6 +174,7 @@ export type VoiceSkillFile = {
     corpusSampleCount: number;
   };
   corpusProfile?: Record<string, unknown>;
+  voiceKernel?: VoiceKernel;
   rules?: SkillRule[];
   retrievalHints?: {
     preferredTopics: string[];
@@ -150,6 +191,7 @@ export type LlmProviderConfig = {
   provider?: ProviderName;
   apiKey?: string;
   model?: string;
+  embeddingModel?: string;
   baseUrl?: string;
   contextWindowTokens?: number;
 };
@@ -164,6 +206,22 @@ export type EvaluationComponentScores = {
   safetyFactuality: number;
 };
 
+export type StyleDistanceMetadata = {
+  score: number;
+  issues: string[];
+  metrics: {
+    lengthFit: number;
+    formatFit: number;
+    vocabularyFit: number;
+    stylometryFit: number;
+    nearestExampleSimilarity: number;
+  };
+  nearestExample?: {
+    text: string;
+    similarity: number;
+  };
+};
+
 export type GeneratedTweetResult = {
   id?: string;
   text: string;
@@ -173,5 +231,16 @@ export type GeneratedTweetResult = {
   issues: string[];
   suggestedRevisionDirection: string;
   componentScores?: EvaluationComponentScores;
+  evaluationMetadata?: {
+    componentScores?: EvaluationComponentScores;
+    styleDistance?: StyleDistanceMetadata;
+    retryCount?: number;
+    provenance?: {
+      skillFileVersion?: string;
+      retrievalMode?: "hybrid" | "voice-only";
+      selectedExamples: string[];
+      counterExamples: string[];
+    };
+  };
   shouldShow?: boolean;
 };

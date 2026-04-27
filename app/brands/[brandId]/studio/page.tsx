@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TweetStudio } from "@/components/studio/TweetStudio";
 import { prisma } from "@/lib/db";
+import { parseJsonField } from "@/lib/request";
+import type { VoiceSkillFile } from "@/lib/types";
+import { getSkillFileHealth } from "@/lib/voice/skillFileHealth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +15,14 @@ export default async function StudioPage({ params }: { params: Promise<{ brandId
     include: { skillFiles: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!brand) notFound();
+  const usefulSampleCount = await prisma.contentSample.count({ where: { brandId, usedForVoice: true } });
+  const latestSkill = brand.skillFiles[0];
+  const skillFile = latestSkill ? parseJsonField<VoiceSkillFile | null>(latestSkill.skillJson, null) : null;
+  const skillHealth = getSkillFileHealth({
+    skillFile,
+    usefulSampleCount,
+    skillCreatedAt: latestSkill?.createdAt,
+  });
 
   return (
     <div className="space-y-8">
@@ -26,8 +37,8 @@ export default async function StudioPage({ params }: { params: Promise<{ brandId
         </Link>
       </div>
 
-      {brand.skillFiles[0] ? (
-        <TweetStudio brandId={brand.id} />
+      {latestSkill ? (
+        <TweetStudio brandId={brand.id} skillHealth={skillHealth} skillFileVersion={skillFile?.version || latestSkill.version} />
       ) : (
         <div className="rounded-ui border border-line bg-panel p-5">
           <h2 className="font-semibold text-ink">No skill file yet</h2>

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import type { VoiceSkillFile } from "@/lib/types";
+import type { SkillFileDiff } from "@/lib/voice/skillFileDiff";
 
-export function SkillFileEditor({ brandId, skillFile }: { brandId: string; skillFile: VoiceSkillFile }) {
+export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: string; skillFile: VoiceSkillFile; versionDiff?: SkillFileDiff | null }) {
   const [text, setText] = useState(JSON.stringify(skillFile, null, 2));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -12,6 +13,7 @@ export function SkillFileEditor({ brandId, skillFile }: { brandId: string; skill
   const retrievalHints = skillFile.retrievalHints;
   const approvedCount = skillFile.exampleLibrary.approvedGenerated.length;
   const rejectedCount = skillFile.exampleLibrary.rejectedGenerated.length;
+  const voiceKernel = skillFile.voiceKernel;
 
   async function save() {
     setError("");
@@ -99,6 +101,81 @@ export function SkillFileEditor({ brandId, skillFile }: { brandId: string; skill
             </dl>
           </div>
         </div>
+
+        {voiceKernel ? (
+          <div className="rounded-ui border border-line bg-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase text-muted">Voice Kernel</p>
+                <h3 className="mt-1 text-base font-semibold text-ink">
+                  {voiceKernel.length.band} rhythm · {voiceKernel.sampleCount.toLocaleString()} samples
+                </h3>
+              </div>
+              <div className="text-right text-sm text-muted">
+                <p>{voiceKernel.length.idealRange[0]}-{voiceKernel.length.idealRange[1]} chars</p>
+                <p>{voiceKernel.formatting.lineBreakRate}% line breaks</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div>
+                <p className="text-xs font-medium uppercase text-muted">Format</p>
+                <dl className="mt-2 space-y-1 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Emoji</dt>
+                    <dd className="font-medium text-ink">{voiceKernel.formatting.emojiFrequency}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Hashtags</dt>
+                    <dd className="font-medium text-ink">{voiceKernel.formatting.hashtagRate}%</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Mentions</dt>
+                    <dd className="font-medium text-ink">{voiceKernel.formatting.mentionRate}%</dd>
+                  </div>
+                </dl>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase text-muted">Openers</p>
+                <ul className="mt-2 space-y-1 text-sm text-ink">
+                  {voiceKernel.rhythm.openingPatterns.slice(0, 3).map((pattern) => (
+                    <li key={pattern}>{pattern}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase text-muted">Model-default bans</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {voiceKernel.vocabulary.forbiddenModelDefaults.slice(0, 8).map((phrase) => (
+                    <span key={phrase} className="rounded-ui bg-white px-2 py-1 text-xs text-ink">
+                      {phrase}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <ul className="mt-4 space-y-1 border-t border-line pt-3 text-sm text-muted">
+              {voiceKernel.generationRules.slice(0, 4).map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {versionDiff ? (
+          <div className="rounded-ui border border-line bg-surface p-4">
+            <p className="text-xs font-medium uppercase text-muted">Version Diff</p>
+            <h3 className="mt-1 text-base font-semibold text-ink">{versionDiff.title}</h3>
+            {versionDiff.items.length ? (
+              <ul className="mt-3 space-y-1 text-sm leading-6 text-muted">
+                {versionDiff.items.slice(0, 12).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-muted">No meaningful voice changes detected between these two versions.</p>
+            )}
+          </div>
+        ) : null}
       </section>
 
       <textarea

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { classifyTweets } from "@/lib/tweets/classifyTweet";
+import { parseTweetTextContent } from "@/lib/tweets/parseTwitterArchive";
 import type { ParsedTweet } from "@/lib/types";
 
 function parsed(rawText: string): ParsedTweet {
@@ -47,6 +48,36 @@ describe("classifyTweets", () => {
     ]);
     expect(tweet.classification).toBe("reply");
     expect(tweet.usedForVoice).toBe(true);
+  });
+
+  it("keeps inline reply metadata out of cleaned voice text", async () => {
+    const parsedTweets = await parseTweetTextContent(
+      "tweets.txt",
+      "Sep 9, 2025 (reply to @metromxyz) KPI based incentives are beneficial for Protocols & LPs alike!",
+    );
+    const [tweet] = classifyTweets(parsedTweets.tweets);
+
+    expect(tweet.classification).toBe("reply");
+    expect(tweet.cleanedText).toBe("KPI based incentives are beneficial for Protocols & LPs alike!");
+    expect(tweet.cleanedText).not.toContain("reply to @");
+  });
+
+  it("does not use quoted third-party context for voice learning", () => {
+    const [quoteOnly, quoteWithComment, quoteWithLongComment] = classifyTweets([
+      parsed("[Quote tweet from BaseSwap @BaseSwapDex · Feb 18, 2025]: Introducing Range-Based Incentives for V3 on BaseSwap!"),
+      parsed("We cooking 👀 [Quote tweet from Venky @0xVenky · Aug 19, 2025]: 👀 soon"),
+      parsed("This partner integration is exactly the kind of liquidity UX we want to see. [Quote tweet from Partner @partner · Feb 18, 2025]: third party text"),
+    ]);
+
+    expect(quoteOnly.classification).toBe("too_short");
+    expect(quoteOnly.usedForVoice).toBe(false);
+    expect(quoteOnly.cleanedText).toBe("");
+    expect(quoteWithComment.classification).toBe("too_short");
+    expect(quoteWithComment.usedForVoice).toBe(false);
+    expect(quoteWithComment.cleanedText).toBe("We cooking 👀");
+    expect(quoteWithLongComment.classification).toBe("quote");
+    expect(quoteWithLongComment.usedForVoice).toBe(false);
+    expect(quoteWithLongComment.cleanedText).toBe("This partner integration is exactly the kind of liquidity UX we want to see.");
   });
 
   it("marks duplicate tweets as noisy after the first instance", () => {

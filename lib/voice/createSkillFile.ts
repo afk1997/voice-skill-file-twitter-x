@@ -1,6 +1,7 @@
 import { BANNED_AI_PHRASES, TWEET_TYPES } from "@/lib/constants";
 import type { SkillRule, VoiceReport, VoiceSkillFile } from "@/lib/types";
 import type { CorpusProfile } from "@/lib/voice/corpusProfile";
+import { buildVoiceKernel } from "@/lib/voice/voiceKernel";
 
 type BrandInput = {
   name: string;
@@ -46,7 +47,17 @@ function buildRules(report: VoiceReport, corpusProfile?: CorpusProfile): SkillRu
     ],
     6,
   );
+  const evidenceRules: SkillRule[] = (report.ruleEvidence ?? []).map((item) => ({
+    id: `evidence-${slug(item.rule)}`,
+    layer: "mechanics" as const,
+    rule: item.rule,
+    confidence: item.confidence,
+    supportingExamples: unique(item.evidence.map((evidence) => evidence.quote), 4),
+    counterExamples: [],
+    appliesTo: ["all"],
+  }));
   const rules: SkillRule[] = [
+    ...evidenceRules,
     ...report.personalityTraits.slice(0, 6).map((trait) => ({
       id: `identity-${slug(trait)}`,
       layer: "identity" as const,
@@ -94,10 +105,19 @@ export function createVoiceSkillFile({
 }): VoiceSkillFile {
   const avoid = splitLines(brand.avoidSoundingLike);
   const firstAvoid = avoid[0] ?? "generic AI copy";
+  const avoidedPhrases = unique([...report.avoidedPhrases, ...avoid, ...BANNED_AI_PHRASES], 48);
+  const voiceKernel = corpusProfile
+    ? buildVoiceKernel({
+        corpusProfile,
+        report,
+        avoidedPhrases,
+      })
+    : undefined;
   const preferredVocabulary = unique(
     [
       ...report.preferredPhrases.flatMap((phrase) => phrase.split(/\s+/)),
       ...(corpusProfile?.vocabulary.topTerms ?? []),
+      ...(voiceKernel?.vocabulary.preferredTerms ?? []),
     ],
     24,
   );
@@ -126,6 +146,7 @@ export function createVoiceSkillFile({
       report.linguisticMechanics.usesEmojis
         ? `Emoji use is ${report.linguisticMechanics.emojiFrequency}.`
         : "Avoid emoji unless the context clearly benefits from one.",
+      ...(voiceKernel?.generationRules ?? []),
     ],
     contextualToneRules: TWEET_TYPES.map((contentType) => ({
       contentType,
@@ -136,7 +157,7 @@ export function createVoiceSkillFile({
       ],
     })),
     preferredPhrases: report.preferredPhrases,
-    avoidedPhrases: Array.from(new Set([...report.avoidedPhrases, ...avoid, ...BANNED_AI_PHRASES])),
+    avoidedPhrases,
     tweetPatterns: report.contentPatterns.map((pattern) => ({
       name: pattern.name,
       structure: pattern.structure,
@@ -162,12 +183,20 @@ export function createVoiceSkillFile({
       corpusSampleCount: corpusProfile?.sampleCount ?? report.exampleTweets.length,
     },
     corpusProfile: corpusProfile ? (corpusProfile as unknown as Record<string, unknown>) : undefined,
+    voiceKernel,
     rules: buildRules(report, corpusProfile),
     retrievalHints: {
       preferredTopics: unique(corpusProfile?.vocabulary.topTerms ?? [], 16),
-      preferredStructures: unique(report.contentPatterns.map((pattern) => pattern.structure), 12),
+      preferredStructures: unique(
+        [
+          ...report.contentPatterns.map((pattern) => pattern.structure),
+          ...(voiceKernel?.formatting.commonLineBreakTemplates ?? []),
+          ...(voiceKernel?.rhythm.openingPatterns ?? []),
+        ],
+        16,
+      ),
       preferredVocabulary,
-      avoidVocabulary: unique([...report.avoidedPhrases, ...avoid, ...BANNED_AI_PHRASES], 32),
+      avoidVocabulary: unique(avoidedPhrases, 40),
     },
     updatedAt: new Date().toISOString(),
   };

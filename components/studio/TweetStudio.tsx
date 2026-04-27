@@ -7,7 +7,8 @@ import { FeedbackButtons } from "@/components/studio/FeedbackButtons";
 import { TWEET_TYPES } from "@/lib/constants";
 import { readApiJson } from "@/lib/http/readApiJson";
 import { candidatePoolSize, providerModeForConfig } from "@/lib/llm/providerMode";
-import type { LlmProviderConfig } from "@/lib/types";
+import type { EvaluationComponentScores, LlmProviderConfig, ProviderName, StyleDistanceMetadata } from "@/lib/types";
+import type { SkillFileHealth } from "@/lib/voice/skillFileHealth";
 
 type Generation = {
   id: string;
@@ -19,6 +20,16 @@ type Generation = {
     issues?: string[];
     suggestedRevisionDirection?: string;
     revisedFromGenerationId?: string;
+    revisionNote?: string;
+    componentScores?: EvaluationComponentScores;
+    styleDistance?: StyleDistanceMetadata;
+    provenance?: {
+      skillFileVersion?: string;
+      retrievalMode?: "hybrid" | "voice-only";
+      selectedExamples?: string[];
+      counterExamples?: string[];
+    };
+    retryCount?: number;
   } | null;
 };
 
@@ -28,7 +39,15 @@ function scoreClass(score: number) {
   return "text-weak";
 }
 
-export function TweetStudio({ brandId }: { brandId: string }) {
+export function TweetStudio({
+  brandId,
+  skillHealth,
+  skillFileVersion,
+}: {
+  brandId: string;
+  skillHealth: SkillFileHealth;
+  skillFileVersion: string;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const contextRef = useRef<HTMLTextAreaElement>(null);
   const [context, setContext] = useState("");
@@ -37,12 +56,17 @@ export function TweetStudio({ brandId }: { brandId: string }) {
   const [notes, setNotes] = useState("");
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [providerConfig, setProviderConfig] = useState<LlmProviderConfig>({});
+  const [serverProvider, setServerProvider] = useState<ProviderName | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const mode = providerModeForConfig(providerConfig);
+  const mode = providerModeForConfig(providerConfig, { serverProvider });
 
   useEffect(() => {
     setProviderConfig(readStoredProviderConfig());
+    fetch("/api/provider-status")
+      .then((response) => readApiJson<{ error?: string; provider?: ProviderName }>(response))
+      .then((status) => setServerProvider(status.provider))
+      .catch(() => setServerProvider(undefined));
   }, []);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -108,6 +132,22 @@ export function TweetStudio({ brandId }: { brandId: string }) {
           ) : null}
         </div>
 
+        <div className="rounded-ui border border-line bg-surface p-3">
+          <p className="text-xs font-semibold uppercase text-muted">Voice Evidence</p>
+          <p className="mt-1 text-sm font-medium text-ink">
+            {skillFileVersion} · {skillHealth.label}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted">{skillHealth.description}</p>
+          <p className="mt-2 text-xs text-muted">
+            {skillHealth.corpusSampleCount.toLocaleString()} corpus samples / {skillHealth.usefulSampleCount.toLocaleString()} useful samples
+          </p>
+          {skillHealth.isStale || !skillHealth.corpusBacked ? (
+            <Link href={`/brands/${brandId}/voice-report`} className="mt-2 inline-flex rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink">
+              Refresh Skill File
+            </Link>
+          ) : null}
+        </div>
+
         <label className="block space-y-1">
           <span className="text-sm font-medium text-ink">Raw idea or context</span>
           <textarea
@@ -168,7 +208,12 @@ export function TweetStudio({ brandId }: { brandId: string }) {
           generations.map((generation) => (
             <article key={generation.id} className="space-y-4 rounded-ui border border-line bg-white p-5">
               {generation.issuesJson?.revisedFromGenerationId ? (
-                <p className="rounded-ui bg-good/10 px-3 py-2 text-xs font-semibold uppercase text-good">Revised with latest Skill File feedback</p>
+                <p className="rounded-ui bg-good/10 px-3 py-2 text-xs font-semibold uppercase text-good">Revised draft</p>
+              ) : null}
+              {generation.issuesJson?.revisionNote ? (
+                <p className="rounded-ui border border-line bg-surface px-3 py-2 text-xs leading-5 text-muted">
+                  Revision note: {generation.issuesJson.revisionNote}
+                </p>
               ) : null}
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <p className="whitespace-pre-wrap text-base leading-7 text-ink">{generation.outputText}</p>
@@ -178,6 +223,40 @@ export function TweetStudio({ brandId }: { brandId: string }) {
                 </div>
               </div>
               {generation.reason ? <p className="text-sm text-muted">{generation.reason}</p> : null}
+              <div className="grid gap-3 md:grid-cols-2">
+                {generation.issuesJson?.componentScores ? (
+                  <div className="rounded-ui border border-line bg-surface p-3">
+                    <p className="text-xs font-semibold uppercase text-muted">Score breakdown</p>
+                    <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      {Object.entries(generation.issuesJson.componentScores).map(([key, value]) => (
+                        <div key={key} className="flex justify-between gap-2">
+                          <dt className="text-muted">{key.replace(/([A-Z])/g, " $1")}</dt>
+                          <dd className="font-medium text-ink">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : null}
+                {generation.issuesJson?.styleDistance ? (
+                  <div className="rounded-ui border border-line bg-surface p-3">
+                    <p className="text-xs font-semibold uppercase text-muted">Style distance</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">{generation.issuesJson.styleDistance.score}/100</p>
+                    <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      {Object.entries(generation.issuesJson.styleDistance.metrics).map(([key, value]) => (
+                        <div key={key} className="flex justify-between gap-2">
+                          <dt className="text-muted">{key.replace(/([A-Z])/g, " $1")}</dt>
+                          <dd className="font-medium text-ink">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {generation.issuesJson.styleDistance.nearestExample ? (
+                      <p className="mt-2 max-h-16 overflow-hidden text-xs leading-5 text-muted">
+                        Nearest: {generation.issuesJson.styleDistance.nearestExample.text}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
               {generation.issuesJson?.issues?.length ? (
                 <div>
                   <p className="text-sm font-medium text-ink">Detected issues</p>
@@ -190,6 +269,26 @@ export function TweetStudio({ brandId }: { brandId: string }) {
               ) : null}
               {generation.issuesJson?.suggestedRevisionDirection ? (
                 <p className="text-sm text-muted">Revision direction: {generation.issuesJson.suggestedRevisionDirection}</p>
+              ) : null}
+              {generation.issuesJson?.provenance?.selectedExamples?.length ? (
+                <details className="rounded-ui border border-line bg-surface p-3">
+                  <summary className="cursor-pointer text-sm font-medium text-ink">
+                    Evidence used
+                    {generation.issuesJson.provenance.retrievalMode ? (
+                      <span className="ml-2 text-xs text-muted">
+                        {generation.issuesJson.provenance.retrievalMode === "hybrid" ? "semantic + voice rerank" : "voice rerank"}
+                      </span>
+                    ) : null}
+                    {generation.issuesJson.retryCount ? <span className="ml-2 text-xs text-muted">retry {generation.issuesJson.retryCount}</span> : null}
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    {generation.issuesJson.provenance.selectedExamples.slice(0, 4).map((example, index) => (
+                      <p key={`${example}-${index}`} className="whitespace-pre-wrap rounded-ui bg-white p-2 text-xs leading-5 text-muted">
+                        {example}
+                      </p>
+                    ))}
+                  </div>
+                </details>
               ) : null}
               <FeedbackButtons
                 generationId={generation.id}

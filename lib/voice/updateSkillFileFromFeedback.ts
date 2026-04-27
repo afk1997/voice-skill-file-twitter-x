@@ -85,6 +85,24 @@ export function updateSkillFileFromFeedback(input: Parameters<typeof updateSkill
   return updateSkillFileFromFeedbackWithSummary(input).skillFile;
 }
 
+export function previewSkillFileFeedbackUpdate(input: Parameters<typeof updateSkillFileFromFeedbackWithSummary>[0]) {
+  const { skillFile, changes } = updateSkillFileFromFeedbackWithSummary(input);
+
+  return {
+    version: input.nextVersion,
+    updatedSkillFile: skillFile,
+    changes,
+    items: [
+      ...changes.addedRules.map((rule) => `Add rule: ${rule}`),
+      ...changes.avoidedPhrases.map((phrase) => `Avoid phrase: ${phrase}`),
+      ...changes.preferredPhrases.map((phrase) => `Prefer phrase: ${phrase}`),
+      ...changes.approvedExamples.map(() => "Save draft as approved example."),
+      ...changes.rejectedExamples.map(() => "Save draft as rejected counterexample."),
+      ...changes.retrievalAvoidVocabulary.map((phrase) => `Avoid retrieving vocabulary: ${phrase}`),
+    ],
+  };
+}
+
 function uniqueRules(rules: NonNullable<VoiceSkillFile["rules"]>) {
   const seen = new Set<string>();
   const result: NonNullable<VoiceSkillFile["rules"]> = [];

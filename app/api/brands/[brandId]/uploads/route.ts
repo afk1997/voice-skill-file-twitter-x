@@ -57,6 +57,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
           mentions: tweet.mentions,
           urls: tweet.urls,
           language: tweet.language,
+          isReply: tweet.metadata.isReply,
+          replyContext: tweet.metadata.replyContext,
         }),
       })),
     });

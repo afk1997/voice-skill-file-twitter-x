@@ -21,6 +21,7 @@ export function providerConfigFromBody(body: { providerConfig?: LlmProviderConfi
     provider: supplied.provider,
     apiKey: supplied.apiKey,
     model: supplied.model,
+    embeddingModel: supplied.embeddingModel,
     baseUrl: supplied.baseUrl,
     contextWindowTokens: Number.isFinite(contextWindowTokens) && contextWindowTokens > 0 ? contextWindowTokens : undefined,
   };

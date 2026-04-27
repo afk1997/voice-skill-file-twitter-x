@@ -28,6 +28,24 @@ describe("providerMode", () => {
     });
   });
 
+  it("shows server env providers as real quality mode without exposing the key", () => {
+    expect(providerModeForConfig({}, { serverProvider: "openai" })).toEqual({
+      label: "Quality",
+      description: "OpenAI quality mode from the server environment.",
+      isQualityMode: true,
+      isLocalDraftMode: false,
+    });
+    expect(providerModeForConfig({ provider: "openai" }, { serverProvider: "openai" })).toMatchObject({
+      label: "Quality",
+      isQualityMode: true,
+    });
+    expect(providerModeForConfig({ provider: "anthropic" }, { serverProvider: "openai" })).toMatchObject({
+      label: "Quality",
+      description: "OpenAI quality mode from the server environment.",
+      isQualityMode: true,
+    });
+  });
+
   it("labels OpenAI-compatible local endpoints as local draft mode", () => {
     expect(
       providerModeForConfig({

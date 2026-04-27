@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { jsonError, jsonOk, parseJsonField, stringifyJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
 import { feedbackOutcome } from "@/lib/voice/feedbackOutcome";
-import { updateSkillFileFromFeedbackWithSummary } from "@/lib/voice/updateSkillFileFromFeedback";
+import { previewSkillFileFeedbackUpdate, updateSkillFileFromFeedbackWithSummary } from "@/lib/voice/updateSkillFileFromFeedback";
 import { nextSkillVersion } from "@/lib/voice/versioning";
 
 export async function POST(request: Request, { params }: { params: Promise<{ generationId: string }> }) {
@@ -39,6 +39,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ gen
   });
 
   const version = nextSkillVersion(latestSkillFile.version);
+
+  if (body.preview === true) {
+    const preview = previewSkillFileFeedbackUpdate({
+      skillFile: currentSkillFile,
+      nextVersion: version,
+      generatedText: generation.outputText,
+      label: body.label,
+      comment: body.comment || null,
+    });
+
+    return jsonOk({
+      outcome: feedbackOutcome(body.label),
+      changes: preview.changes,
+      preview: {
+        version,
+        items: preview.items,
+      },
+      skillFile: { brandId: generation.brandId, version, skillJson: preview.updatedSkillFile },
+    });
+  }
+
   const { skillFile: updated, changes } = updateSkillFileFromFeedbackWithSummary({
     skillFile: currentSkillFile,
     nextVersion: version,

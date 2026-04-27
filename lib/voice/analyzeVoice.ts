@@ -185,6 +185,25 @@ function averageLength(samples: string[]) {
   return Math.round(samples.reduce((total, sample) => total + sample.length, 0) / samples.length);
 }
 
+function analysisTerms(value: string) {
+  return new Set(value.toLowerCase().match(/[a-z][a-z0-9']+/g) ?? []);
+}
+
+function jaccardSimilarity(source: Set<string>, target: Set<string>) {
+  if (source.size === 0 || target.size === 0) return 0;
+  let intersection = 0;
+  for (const item of source) {
+    if (target.has(item)) intersection += 1;
+  }
+  return intersection / (source.size + target.size - intersection);
+}
+
+function isNearDuplicate(candidate: string, selected: string[]) {
+  const candidateKey = candidate.trim().toLowerCase();
+  const candidateTerms = analysisTerms(candidate);
+  return selected.some((sample) => sample.trim().toLowerCase() === candidateKey || jaccardSimilarity(candidateTerms, analysisTerms(sample)) >= 0.82);
+}
+
 function normalizeAverageTweetLength(value: unknown, samples: string[], corpusStats?: CorpusVoiceStats) {
   if (corpusStats) return corpusStats.averageTweetLength;
   const numeric = Number(value);
@@ -203,6 +222,37 @@ function normalizeToneSliders(value: unknown): VoiceReport["toneSliders"] {
     sliders[key] = Math.max(0, Math.min(100, Math.round(shouldScaleFivePointValues ? value * 20 : value)));
     return sliders;
   }, { ...DEFAULT_TONE_SLIDERS });
+}
+
+function normalizeRuleEvidence(value: unknown): NonNullable<VoiceReport["ruleEvidence"]> | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const items = value
+    .map((item) => {
+      const source = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+      const evidence = Array.isArray(source.evidence)
+        ? source.evidence
+            .map((entry) => {
+              const evidenceSource = (entry && typeof entry === "object" ? entry : {}) as Record<string, unknown>;
+              return {
+                quote: String(evidenceSource.quote || "").trim(),
+                reason: String(evidenceSource.reason || "").trim(),
+              };
+            })
+            .filter((entry) => entry.quote && entry.reason)
+            .slice(0, 4)
+        : [];
+
+      return {
+        rule: String(source.rule || "").trim(),
+        confidence: Number.isFinite(Number(source.confidence)) ? Math.max(0, Math.min(100, Math.round(Number(source.confidence)))) : 75,
+        evidence,
+      };
+    })
+    .filter((item) => item.rule && item.evidence.length > 0)
+    .slice(0, 12);
+
+  return items.length > 0 ? items : undefined;
 }
 
 export function normalizeVoiceReport(report: unknown, samples: string[], corpusStats?: CorpusVoiceStats): VoiceReport {
@@ -242,6 +292,7 @@ export function normalizeVoiceReport(report: unknown, samples: string[], corpusS
         })
       : [],
     exampleTweets: stringArray(source.exampleTweets, samples.slice(0, 5)),
+    ruleEvidence: normalizeRuleEvidence(source.ruleEvidence),
   };
 }
 
@@ -255,6 +306,7 @@ export function selectAnalysisSamplesForPrompt(samples: SampleInput[], maxChars 
     .slice(0, MAX_ANALYSIS_SAMPLES)) {
     const text = sample.cleanedText.trim();
     if (!text) continue;
+    if (isNearDuplicate(text, selected)) continue;
 
     const nextLength = usedChars + text.length;
     if (selected.length > 0 && nextLength > maxChars) continue;
@@ -333,6 +385,7 @@ export function mergeVoiceReports(reports: VoiceReport[], samples: string[], cor
     avoidedPhrases: uniqueStrings(reports.flatMap((report) => report.avoidedPhrases), 18),
     contentPatterns: reports.flatMap((report) => report.contentPatterns).slice(0, 10),
     exampleTweets: uniqueStrings(reports.flatMap((report) => report.exampleTweets).concat(samples), 10),
+    ruleEvidence: reports.flatMap((report) => report.ruleEvidence ?? []).slice(0, 12),
   };
 
   return normalizeVoiceReport(source, samples, corpusStats);

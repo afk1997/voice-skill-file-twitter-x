@@ -62,7 +62,7 @@ export function classifyTweets(tweets: ParsedTweet[]): ClassifiedTweet[] {
     const cleaned = cleanTweet(tweet.rawText);
     const key = duplicateKey(cleaned.cleanedText);
     const classification = classifySingle(tweet, cleaned.cleanedText, seen);
-    const usedForVoice = classification === "useful" || classification === "reply" || classification === "quote" || classification === "thread_candidate";
+    const usedForVoice = classification === "useful" || classification === "reply" || classification === "thread_candidate";
 
     if (usedForVoice && key) {
       seen.add(key);

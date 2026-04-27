@@ -15,7 +15,12 @@ export function cleanTweet(rawText: string): CleanedTweet {
     rawText,
   );
 
-  const withoutUrls = decoded.replace(/https?:\/\/\S+/gi, "").replace(/\bt\.co\/\S+/gi, "");
+  const withoutQuoteContext = decoded.replace(/\s*\[Quote tweet[^\]]*\]:?[\s\S]*$/i, "");
+  const withoutMediaAnnotations = withoutQuoteContext.replace(
+    /\s*\[(?:Image(?:\s+showing)?|Screenshot(?:\s+showing)?|Video thumbnail|Link card):?[^\]]*\]/gi,
+    "",
+  );
+  const withoutUrls = withoutMediaAnnotations.replace(/https?:\/\/\S+/gi, "").replace(/\bt\.co\/\S+/gi, "");
   const cleanedText = withoutUrls
     .replace(/\r\n?/g, "\n")
     .split("\n")

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Check, Eye, RotateCcw, Save, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { readStoredProviderConfig } from "@/components/settings/ProviderSettingsForm";
 import { readApiJson } from "@/lib/http/readApiJson";
@@ -16,6 +17,7 @@ type Generation = {
     issues?: string[];
     suggestedRevisionDirection?: string;
     revisedFromGenerationId?: string;
+    revisionNote?: string;
   } | null;
 };
 
@@ -27,9 +29,15 @@ type FeedbackResult = {
   };
   changes: {
     addedRules: string[];
+    preferredPhrases?: string[];
     avoidedPhrases: string[];
     approvedExamples: string[];
     rejectedExamples: string[];
+    retrievalAvoidVocabulary?: string[];
+  };
+  preview?: {
+    version: string;
+    items: string[];
   };
   skillFile: {
     brandId: string;
@@ -51,20 +59,22 @@ export function FeedbackButtons({
   const [comment, setComment] = useState("");
   const [selectedReason, setSelectedReason] = useState<string>(NOTE_ONLY_FEEDBACK_LABEL);
   const [result, setResult] = useState<FeedbackResult | null>(null);
+  const [preview, setPreview] = useState<FeedbackResult | null>(null);
   const [revisionMessage, setRevisionMessage] = useState("");
   const [error, setError] = useState("");
   const [loadingLabel, setLoadingLabel] = useState("");
   const [revisionLoading, setRevisionLoading] = useState(false);
 
-  async function submit(label: string, options: { reviseAfter?: boolean } = {}) {
+  async function submit(label: string, options: { reviseAfter?: boolean; previewOnly?: boolean } = {}) {
+    const submittedComment = comment;
     setError("");
-    setResult(null);
+    if (!options.previewOnly) setResult(null);
     setRevisionMessage("");
     setLoadingLabel(label);
     const response = await fetch(`/api/generations/${generationId}/feedback`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ label, comment }),
+      body: JSON.stringify({ label, comment, preview: options.previewOnly === true }),
     });
     const json = await readApiJson<{ error?: string } & FeedbackResult>(response);
     setLoadingLabel("");
@@ -72,21 +82,38 @@ export function FeedbackButtons({
       setError(json.error || "Could not save feedback.");
       return;
     }
-    setResult(json);
-    setComment("");
-    if (options.reviseAfter) {
-      await reviseDraft();
+    if (options.previewOnly) {
+      setPreview(json);
+      return;
     }
+    setPreview(null);
+    setResult(json);
+    if (options.reviseAfter) {
+      await reviseDraft({ comment: submittedComment, label, successMessage: "Skill File updated; revised draft added below this one." });
+    }
+    setComment("");
   }
 
-  async function reviseDraft() {
+  async function reviseDraft({
+    comment: revisionComment = comment,
+    label: revisionLabel = selectedReason === NOTE_ONLY_FEEDBACK_LABEL ? "Revision note" : selectedReason,
+    successMessage,
+  }: {
+    comment?: string;
+    label?: string;
+    successMessage?: string;
+  } = {}) {
     setError("");
     setRevisionMessage("");
     setRevisionLoading(true);
     const response = await fetch(`/api/generations/${generationId}/revise`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ providerConfig: readStoredProviderConfig() }),
+      body: JSON.stringify({
+        providerConfig: readStoredProviderConfig(),
+        comment: revisionComment,
+        label: revisionLabel,
+      }),
     });
     const json = await readApiJson<{ error?: string; generation?: Generation }>(response);
     setRevisionLoading(false);
@@ -95,7 +122,7 @@ export function FeedbackButtons({
       return;
     }
     onRevisionCreated(json.generation, generationId);
-    setRevisionMessage("Revised draft added below this one.");
+    setRevisionMessage(successMessage || "Revised draft added below this one.");
   }
 
   const canRevise = Boolean(result && result.outcome.title !== "Approved example saved" && !revisionMessage);
@@ -104,22 +131,25 @@ export function FeedbackButtons({
     ? [
         ...result.changes.addedRules.map((rule) => `Added rule: ${rule}`),
         ...result.changes.avoidedPhrases.map((phrase) => `Avoid now: ${phrase}`),
+        ...(result.changes.preferredPhrases ?? []).map((phrase) => `Prefer now: ${phrase}`),
         ...result.changes.approvedExamples.map(() => "Saved this draft as an approved example."),
         ...result.changes.rejectedExamples.map(() => "Saved this draft as a rejected counterexample."),
+        ...(result.changes.retrievalAvoidVocabulary ?? []).map((phrase) => `Avoid retrieving: ${phrase}`),
       ]
     : [];
+  const previewItems = preview?.preview?.items ?? [];
 
   return (
     <div className="space-y-4 border-t border-line pt-4">
       <div className="grid gap-3 md:grid-cols-[1fr_220px]">
         <label className="block space-y-2 text-sm font-medium text-ink" htmlFor={`feedback-note-${generationId}`}>
-          <span>What should change?</span>
+          <span>Revision note</span>
           <textarea
             id={`feedback-note-${generationId}`}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             className="min-h-20 w-full rounded-ui border border-line px-3 py-2 text-sm font-normal"
-            placeholder="Example: no em dashes, less hype, mention LPs, keep the idea but make it sharper..."
+            placeholder="No em dashes, less hype, mention LPs, keep the idea but make it sharper..."
           />
         </label>
         <label className="block space-y-2 text-sm font-medium text-ink" htmlFor={`feedback-reason-${generationId}`}>
@@ -140,28 +170,85 @@ export function FeedbackButtons({
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-ui border border-line bg-surface p-3">
         <button
           type="button"
-          onClick={() => submit(selectedReason, { reviseAfter: true })}
+          onClick={() => reviseDraft()}
           disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
-          className="rounded-ui bg-ink px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-ui bg-ink px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
-          {loadingLabel || revisionLoading ? "Applying feedback..." : "Save feedback & revise draft"}
+          <RotateCcw size={16} aria-hidden="true" />
+          {revisionLoading ? "Revising..." : "Revise with note"}
         </button>
+        <button
+          type="button"
+          onClick={() => submit(selectedReason, { previewOnly: true })}
+          disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
+          className="inline-flex items-center gap-2 rounded-ui border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink disabled:opacity-40"
+        >
+          <Eye size={16} aria-hidden="true" />
+          {loadingLabel || revisionLoading ? "Previewing..." : "Preview Skill File patch"}
+        </button>
+        <span className="text-xs leading-5 text-muted">Revise changes this draft. Patch teaches future drafts.</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
         {PRIMARY_FEEDBACK_ACTIONS.map((action) => (
           <button
             key={action.label}
             type="button"
             onClick={() => submit(action.label)}
             disabled={Boolean(loadingLabel) || revisionLoading}
-            className="rounded-ui border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-ui border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink disabled:opacity-60"
           >
+            {action.label === REJECT_FEEDBACK_LABEL ? null : <Check size={16} aria-hidden="true" />}
             {loadingLabel === action.label ? "Saving..." : action.label === REJECT_FEEDBACK_LABEL ? "Reject draft" : "Approve"}
           </button>
         ))}
-        <span className="text-xs leading-5 text-muted">Feedback edits the Skill File first, then revises this draft with the updated rules.</span>
       </div>
+
+      {preview ? (
+        <div className="rounded-ui border border-line bg-panel p-4">
+          <p className="text-sm font-semibold text-ink">Patch preview for {preview.preview?.version ?? preview.skillFile.version}</p>
+          <p className="mt-1 text-sm leading-6 text-muted">{preview.outcome.description}</p>
+          {previewItems.length ? (
+            <ul className="mt-3 space-y-1 text-sm leading-6 text-muted">
+              {previewItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted">No Skill File changes detected for this feedback.</p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => submit(selectedReason, { reviseAfter: true })}
+              disabled={Boolean(loadingLabel) || revisionLoading}
+              className="inline-flex items-center gap-2 rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
+            >
+              <Sparkles size={14} aria-hidden="true" />
+              {loadingLabel || revisionLoading ? "Applying feedback..." : "Teach voice & revise"}
+            </button>
+            <button
+              type="button"
+              onClick={() => submit(selectedReason)}
+              disabled={Boolean(loadingLabel) || revisionLoading}
+              className="inline-flex items-center gap-2 rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink disabled:opacity-60"
+            >
+              <Save size={14} aria-hidden="true" />
+              Apply patch only
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreview(null)}
+              className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-muted hover:text-ink"
+            >
+              Keep editing feedback
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {result ? (
         <div className="rounded-ui border border-line bg-panel p-4">
@@ -187,11 +274,12 @@ export function FeedbackButtons({
               {canRevise ? (
                 <button
                   type="button"
-                  onClick={reviseDraft}
+                  onClick={() => reviseDraft()}
                   disabled={revisionLoading}
-                  className="rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
                 >
-                  {revisionLoading ? "Applying fixes..." : "Apply fixes to this draft"}
+                  <RotateCcw size={14} aria-hidden="true" />
+                  {revisionLoading ? "Applying fixes..." : "Revise using saved feedback"}
                 </button>
               ) : null}
               <button type="button" onClick={onGenerateAnother} className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink">

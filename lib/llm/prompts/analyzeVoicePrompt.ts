@@ -59,7 +59,16 @@ Use this exact JSON shape. Tone slider values must be integers from 0 to 100, no
   "contentPatterns": [
     { "name": "pattern name", "description": "what it does", "structure": "how it is formatted" }
   ],
-  "exampleTweets": ["tweet"]
+  "exampleTweets": ["tweet"],
+  "ruleEvidence": [
+    {
+      "rule": "specific style rule learned from repeated evidence",
+      "confidence": 0,
+      "evidence": [
+        { "quote": "short exact quote from a sample", "reason": "why this quote supports the rule" }
+      ]
+    }
+  ]
 }
 
 Anti-slop rules:
@@ -69,6 +78,7 @@ Anti-slop rules:
 - Preserve observations about line breaks, bullets, spacing, and thread formatting.
 - Treat corpus stats as authoritative for mechanics. Use samples for qualitative patterns.
 - Treat the corpus profile as authoritative for distribution, vocabulary, hooks, endings, and formatting evidence.
+- Every ruleEvidence item must be grounded in exact sample quotes. Do not invent quotes.
 - Analysis mode: ${analysisMode}.
 - Treat these as avoided phrases: ${BANNED_AI_PHRASES.join(", ")}.
 

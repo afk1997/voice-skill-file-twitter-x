@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { VoiceSkillFile } from "@/lib/types";
-import { updateSkillFileFromFeedback } from "@/lib/voice/updateSkillFileFromFeedback";
+import { previewSkillFileFeedbackUpdate, updateSkillFileFromFeedback } from "@/lib/voice/updateSkillFileFromFeedback";
 
 const base = {
   version: "v1.0",
@@ -81,5 +81,21 @@ describe("updateSkillFileFromFeedback v2", () => {
     expect(next.exampleLibrary.approvedGenerated).toEqual([]);
     expect(next.exampleLibrary.rejectedGenerated).toContain("Solana just got programmable incentives. 🟣");
     expect(next.rules?.some((rule) => rule.rule.includes("Reject drafts like this") && rule.counterExamples.includes("Solana just got programmable incentives. 🟣"))).toBe(true);
+  });
+
+  it("previews the exact feedback patch without mutating the original Skill File", () => {
+    const preview = previewSkillFileFeedbackUpdate({
+      skillFile: base,
+      nextVersion: "v1.1",
+      generatedText: "Solana just got programmable incentives — protocols can launch campaigns permissionlessly.",
+      label: "Save note only",
+      comment: "Please don't use em-dashes in our tweets.",
+    });
+
+    expect(preview.version).toBe("v1.1");
+    expect(preview.items).toContain("Add rule: Do not use em dashes in generated tweets. Use commas, periods, colons, or shorter sentences instead.");
+    expect(preview.items).toContain("Avoid phrase: —");
+    expect(preview.updatedSkillFile.avoidedPhrases).toContain("—");
+    expect(base.avoidedPhrases).toEqual([]);
   });
 });

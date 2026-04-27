@@ -7,6 +7,10 @@ export type ProviderMode = {
   isLocalDraftMode: boolean;
 };
 
+export type ProviderModeOptions = {
+  serverProvider?: ProviderName;
+};
+
 export function defaultModelForProvider(provider?: ProviderName) {
   if (provider === "anthropic") return "claude-sonnet-4-6";
   if (provider === "openai") return "gpt-5.4";
@@ -19,7 +23,38 @@ export function isLocalBaseUrl(baseUrl?: string) {
   return Boolean(baseUrl && /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(baseUrl));
 }
 
-export function providerModeForConfig(config: LlmProviderConfig): ProviderMode {
+export function providerModeForConfig(config: LlmProviderConfig, options: ProviderModeOptions = {}): ProviderMode {
+  const hasBrowserKey = Boolean(config.apiKey);
+  const hasLocalEndpoint = Boolean(config.provider === "openai-compatible" && config.baseUrl);
+  const usesServerProvider = Boolean(options.serverProvider && !hasBrowserKey && !hasLocalEndpoint);
+
+  if (usesServerProvider) {
+    if (options.serverProvider === "anthropic") {
+      return {
+        label: "Quality",
+        description: "Claude quality mode from the server environment.",
+        isQualityMode: true,
+        isLocalDraftMode: false,
+      };
+    }
+
+    if (options.serverProvider === "openai") {
+      return {
+        label: "Quality",
+        description: "OpenAI quality mode from the server environment.",
+        isQualityMode: true,
+        isLocalDraftMode: false,
+      };
+    }
+
+    return {
+      label: "Alternate",
+      description: "Server environment provider is configured. Quality depends on the selected model.",
+      isQualityMode: false,
+      isLocalDraftMode: false,
+    };
+  }
+
   if (!config.provider || !config.apiKey) {
     return {
       label: "Setup Required",

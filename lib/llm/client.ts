@@ -19,7 +19,7 @@ function envKey(provider?: string) {
   return undefined;
 }
 
-function providerFromEnv(): ProviderName | undefined {
+export function providerFromEnv(): ProviderName | undefined {
   if (process.env.ANTHROPIC_API_KEY) return "anthropic";
   if (process.env.OPENAI_API_KEY) return "openai";
   if (process.env.OPENROUTER_API_KEY) return "openrouter";
@@ -34,6 +34,9 @@ function resolveProvider(config: LlmProviderConfig): ProviderName | undefined {
     config.provider === "openrouter" ||
     config.provider === "openai-compatible"
   ) {
+    if (!config.apiKey && !envKey(config.provider) && !config.baseUrl) {
+      return providerFromEnv() ?? config.provider;
+    }
     return config.provider;
   }
 

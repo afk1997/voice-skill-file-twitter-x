@@ -20,6 +20,9 @@ export type CorpusProfile = {
     commonLineBreakTemplates: string[];
     emojiFrequency: "none" | "low" | "medium" | "high";
     commonEmojis: string[];
+    hashtagRate: number;
+    mentionRate: number;
+    urlRate: number;
     punctuationProfile: string;
     capitalizationProfile: string;
   };
@@ -34,6 +37,13 @@ export type CorpusProfile = {
       count: number;
     }[];
     avoidedSignals: string[];
+  };
+  stylometry: {
+    topCharacterTrigrams: string[];
+    punctuationDensity: number;
+    averageWordCount: number;
+    questionRate: number;
+    exclamationRate: number;
   };
   hooks: string[];
   endings: string[];
@@ -115,6 +125,17 @@ function wordsFor(text: string) {
   return text.toLowerCase().match(WORD_PATTERN) ?? [];
 }
 
+function characterTrigramsFor(text: string) {
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim();
+  if (normalized.length < 3) return [];
+  const trigrams: string[] = [];
+  for (let index = 0; index <= normalized.length - 3; index += 1) {
+    const gram = normalized.slice(index, index + 3);
+    if (/[a-z0-9]/.test(gram)) trigrams.push(gram);
+  }
+  return trigrams;
+}
+
 function topMapEntries(map: Map<string, number>, limit: number) {
   return Array.from(map.entries())
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -160,11 +181,26 @@ export function buildCorpusProfile(samples: CorpusProfileInput[]): CorpusProfile
   const average = lengths.length === 0 ? 0 : Math.round(lengths.reduce((total, length) => total + length, 0) / lengths.length);
   const lineBreakSamples = cleanSamples.filter((sample) => sample.cleanedText.includes("\n"));
   const emojiMatches = sampleTexts.flatMap((sample) => sample.match(EMOJI_PATTERN) ?? []);
+  const hashtagSamples = cleanSamples.filter((sample) => /(^|\s)#\w+/.test(sample.cleanedText));
+  const mentionSamples = cleanSamples.filter((sample) => /(^|\s)@\w+/.test(sample.cleanedText));
+  const urlSamples = cleanSamples.filter((sample) => /\bhttps?:\/\/\S+|\bwww\.\S+/i.test(sample.cleanedText));
   const termCounts = new Map<string, number>();
   const phraseCounts = new Map<string, number>();
+  const characterTrigramCounts = new Map<string, number>();
+  let totalWords = 0;
+  let totalPunctuation = 0;
+  let totalCharacters = 0;
+  let questionSamples = 0;
+  let exclamationSamples = 0;
 
   for (const sample of sampleTexts) {
     const words = wordsFor(sample);
+    totalWords += words.length;
+    totalPunctuation += (sample.match(/[!?.,:;]/g) ?? []).length;
+    totalCharacters += visibleLength(sample);
+    if (sample.includes("?")) questionSamples += 1;
+    if (sample.includes("!")) exclamationSamples += 1;
+
     for (const word of words) {
       if (word.length < 3 || STOP_WORDS.has(word)) continue;
       termCounts.set(word, (termCounts.get(word) ?? 0) + 1);
@@ -177,10 +213,16 @@ export function buildCorpusProfile(samples: CorpusProfileInput[]): CorpusProfile
       const phrase = `${first} ${second}`;
       phraseCounts.set(phrase, (phraseCounts.get(phrase) ?? 0) + 1);
     }
+
+    for (const trigram of characterTrigramsFor(sample)) {
+      characterTrigramCounts.set(trigram, (characterTrigramCounts.get(trigram) ?? 0) + 1);
+    }
   }
 
   const repeatedPhrases = topMapEntries(phraseCounts, 20).map(([text, count]) => ({ text, count }));
   const templates = Array.from(new Set(lineBreakSamples.map((sample) => lineBreakTemplate(sample.cleanedText)))).slice(0, 8);
+  const openingSamples = cleanSamples.filter((sample) => sample.classification !== "reply" && sample.classification !== "quote");
+  const hookSourceSamples = openingSamples.length > 0 ? openingSamples : cleanSamples;
 
   return {
     sampleCount: cleanSamples.length,
@@ -199,6 +241,9 @@ export function buildCorpusProfile(samples: CorpusProfileInput[]): CorpusProfile
         emojiMatches.reduce((map, emoji) => map.set(emoji, (map.get(emoji) ?? 0) + 1), new Map<string, number>()),
         8,
       ).map(([emoji]) => emoji),
+      hashtagRate: usageRate(hashtagSamples.length, cleanSamples.length),
+      mentionRate: usageRate(mentionSamples.length, cleanSamples.length),
+      urlRate: usageRate(urlSamples.length, cleanSamples.length),
       punctuationProfile: punctuationProfile(sampleTexts),
       capitalizationProfile: capitalizationProfile(sampleTexts),
     },
@@ -211,7 +256,14 @@ export function buildCorpusProfile(samples: CorpusProfileInput[]): CorpusProfile
       topPhrases: repeatedPhrases,
       avoidedSignals: BANNED_AI_PHRASES.filter((phrase) => sampleTexts.some((sample) => sample.toLowerCase().includes(phrase.toLowerCase()))),
     },
-    hooks: Array.from(new Set(cleanSamples.map((sample) => firstSentence(sample.cleanedText)).filter(Boolean))).slice(0, 16),
+    stylometry: {
+      topCharacterTrigrams: topMapEntries(characterTrigramCounts, 32).map(([trigram]) => trigram),
+      punctuationDensity: totalCharacters === 0 ? 0 : Math.round((totalPunctuation / totalCharacters) * 1000) / 10,
+      averageWordCount: cleanSamples.length === 0 ? 0 : Math.round(totalWords / cleanSamples.length),
+      questionRate: usageRate(questionSamples, cleanSamples.length),
+      exclamationRate: usageRate(exclamationSamples, cleanSamples.length),
+    },
+    hooks: Array.from(new Set(hookSourceSamples.map((sample) => firstSentence(sample.cleanedText)).filter(Boolean))).slice(0, 16),
     endings: Array.from(new Set(cleanSamples.map((sample) => lastSentence(sample.cleanedText)).filter(Boolean))).slice(0, 16),
     representativeExamples: cleanSamples
       .slice()

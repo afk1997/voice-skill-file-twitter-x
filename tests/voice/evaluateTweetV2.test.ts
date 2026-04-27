@@ -7,6 +7,33 @@ const skillFile = {
   preferredPhrases: ["specific beats generic"],
   linguisticRules: ["Use concrete language.", "Avoid polished corporate announcement language."],
   exampleLibrary: { onBrand: ["Specific examples beat vague advice."], approvedGenerated: [], rejectedGenerated: [], offBrand: [] },
+  voiceKernel: {
+    sampleCount: 100,
+    length: { idealRange: [75, 150], median: 110, p90: 190, band: "medium" },
+    formatting: {
+      lineBreakRate: 5,
+      commonLineBreakTemplates: ["<line>"],
+      emojiFrequency: "none",
+      commonEmojis: [],
+      hashtagRate: 0,
+      mentionRate: 0,
+      urlRate: 0,
+    },
+    rhythm: {
+      openingPatterns: ["Lead with concrete nouns"],
+      endingPatterns: ["End on a practical consequence"],
+      punctuationHabit: "clean punctuation",
+      capitalizationHabit: "standard capitalization",
+      firstPersonRate: 10,
+      secondPersonRate: 8,
+    },
+    vocabulary: {
+      preferredTerms: ["specific", "tradeoff", "reward"],
+      preferredPhrases: ["specific beats generic"],
+      forbiddenModelDefaults: ["unlock", "seamless"],
+    },
+    generationRules: ["Stay near 75-150 characters.", "Avoid emojis."],
+  },
 } as VoiceSkillFile;
 
 describe("evaluateTweet v2", () => {
@@ -53,5 +80,57 @@ describe("evaluateTweet v2", () => {
 
     expect(result.issues).toContain("Violates learned punctuation rule: do not use em dashes");
     expect(result.shouldShow).toBe(false);
+  });
+
+  it("penalizes drafts that miss the voice kernel shape", () => {
+    const result = evaluateTweet({
+      tweet:
+        "Unlock a seamless, revolutionary ecosystem experience for everyone 🚀🚀🚀 #growth #innovation #future",
+      context: "DeFi rewards launch",
+      tweetType: "single tweet",
+      skillFile,
+    });
+
+    expect(result.issues).toContain("Uses model-default phrasing: unlock");
+    expect(result.issues).toContain("Uses emoji despite a no-emoji voice kernel");
+    expect(result.issues).toContain("Uses hashtags despite a no-hashtag voice kernel");
+    expect(result.score).toBeLessThan(70);
+    expect(result.shouldShow).toBe(false);
+  });
+
+  it("rejects numbered thread fragments for non-thread tweets", () => {
+    const result = evaluateTweet({
+      tweet: "2/ Raw deposits inflate TVL. KPI-based campaigns pay for usable liquidity.",
+      context: "KPI incentives",
+      tweetType: "single tweet",
+      skillFile,
+    });
+
+    expect(result.issues).toContain("Starts with a thread marker for a non-thread draft");
+    expect(result.shouldShow).toBe(false);
+  });
+
+  it("rejects live or availability claims when the request does not support them", () => {
+    const result = evaluateTweet({
+      tweet: "Live now: reward net supply, volume, or depth. Not raw deposits.",
+      context: "KPI incentives should target outcomes instead of raw deposits",
+      tweetType: "single tweet",
+      skillFile,
+    });
+
+    expect(result.issues).toContain("Uses live or availability wording not supported by the request context");
+    expect(result.shouldShow).toBe(false);
+  });
+
+  it("allows live or availability claims when notes support them", () => {
+    const result = evaluateTweet({
+      tweet: "Live now: reward net supply, volume, or depth. Not raw deposits.",
+      context: "KPI incentives should target outcomes instead of raw deposits",
+      tweetType: "single tweet",
+      notes: "The campaign is live today.",
+      skillFile,
+    });
+
+    expect(result.issues).not.toContain("Uses live or availability wording not supported by the request context");
   });
 });

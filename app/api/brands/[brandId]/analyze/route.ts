@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { providerConfigFromBody, jsonError, jsonErrorFromUnknown, jsonOk, parseJsonField, stringifyJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
 import { analyzeVoice } from "@/lib/voice/analyzeVoice";
-import { createVoiceSkillFile } from "@/lib/voice/createSkillFile";
+import { buildSkillFileFromVoiceAnalysis } from "@/lib/voice/analysisSkillFile";
 
 export async function POST(request: Request, { params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
     where: { brandId, usedForVoice: true },
     orderBy: { qualityScore: "desc" },
     take: MAX_CORPUS_ANALYSIS_SAMPLES,
-    select: { cleanedText: true, qualityScore: true },
+    select: { cleanedText: true, qualityScore: true, classification: true },
   });
 
   if (samples.length === 0) {
@@ -23,10 +23,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
 
   try {
     const body = await request.json().catch(() => ({}));
+    const providerConfig = providerConfigFromBody(body);
     const report = await analyzeVoice({
       brand,
       samples,
-      providerConfig: providerConfigFromBody(body),
+      providerConfig,
     });
 
     await prisma.voiceReportRecord.create({
@@ -38,21 +39,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
       orderBy: { createdAt: "desc" },
     });
 
-    if (existingSkillFile) {
-      return jsonOk({
-        report,
-        skillFile: {
-          ...existingSkillFile,
-          skillJson: parseJsonField<VoiceSkillFile | null>(existingSkillFile.skillJson, null),
-        },
-      });
-    }
-
-    const skillJson = createVoiceSkillFile({ version: "v1.0", brand, report });
+    const generatedWith = providerConfig.model || providerConfig.provider;
+    const previousSkillFile = existingSkillFile ? parseJsonField<VoiceSkillFile | null>(existingSkillFile.skillJson, null) : null;
+    const { version, skillFile: skillJson } = buildSkillFileFromVoiceAnalysis({
+      previousVersion: existingSkillFile?.version,
+      previousSkillFile,
+      brand,
+      report,
+      samples,
+      generatedWith,
+    });
     const skillFile = await prisma.skillFile.create({
       data: {
         brandId,
-        version: "v1.0",
+        version,
         skillJson: stringifyJsonField(skillJson),
       },
     });

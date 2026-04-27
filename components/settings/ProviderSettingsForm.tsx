@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readApiJson } from "@/lib/http/readApiJson";
 import { defaultModelForProvider, providerModeForConfig } from "@/lib/llm/providerMode";
 import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 
@@ -16,6 +17,7 @@ const PROVIDERS: { value: ProviderName; label: string }[] = [
 const DEFAULT_CONFIG: LlmProviderConfig = {
   provider: "anthropic",
   model: "",
+  embeddingModel: "",
   baseUrl: "",
   apiKey: "",
   contextWindowTokens: undefined,
@@ -39,11 +41,16 @@ export function readStoredProviderConfig(): LlmProviderConfig {
 
 export function ProviderSettingsForm() {
   const [config, setConfig] = useState<LlmProviderConfig>(DEFAULT_CONFIG);
+  const [serverProvider, setServerProvider] = useState<ProviderName | undefined>();
   const [saved, setSaved] = useState(false);
-  const mode = providerModeForConfig(config);
+  const mode = providerModeForConfig(config, { serverProvider });
 
   useEffect(() => {
     setConfig({ ...DEFAULT_CONFIG, ...readStoredProviderConfig() });
+    fetch("/api/provider-status")
+      .then((response) => readApiJson<{ error?: string; provider?: ProviderName }>(response))
+      .then((status) => setServerProvider(status.provider))
+      .catch(() => setServerProvider(undefined));
   }, []);
 
   function update<K extends keyof LlmProviderConfig>(key: K, value: LlmProviderConfig[K]) {
@@ -112,6 +119,17 @@ export function ProviderSettingsForm() {
           placeholder="Optional. LM Studio default is often 4096."
         />
         <span className="text-xs text-muted">Leave blank for auto. Use the context size you loaded in your local model settings.</span>
+      </label>
+
+      <label className="block space-y-1">
+        <span className="text-sm font-medium text-ink">Embedding model</span>
+        <input
+          value={config.embeddingModel || ""}
+          onChange={(event) => update("embeddingModel", event.target.value)}
+          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          placeholder="Optional. Defaults to text-embedding-3-small."
+        />
+        <span className="text-xs text-muted">Used for hybrid semantic retrieval when OpenAI or OpenAI-compatible embeddings are available.</span>
       </label>
 
       <label className="block space-y-1">

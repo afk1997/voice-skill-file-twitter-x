@@ -31,6 +31,18 @@ const report: VoiceReport = {
   avoidedPhrases: ["game-changing"],
   contentPatterns: [{ name: "Claim then proof", description: "Claim with concrete detail", structure: "Claim -> reason -> takeaway" }],
   exampleTweets: ["Specific examples beat vague advice because readers can copy the move."],
+  ruleEvidence: [
+    {
+      rule: "Lead with a concrete claim before the lesson.",
+      confidence: 92,
+      evidence: [
+        {
+          quote: "Specific examples beat vague advice because readers can copy the move.",
+          reason: "The claim arrives before the explanation.",
+        },
+      ],
+    },
+  ],
 };
 
 describe("createVoiceSkillFile v2", () => {
@@ -52,6 +64,10 @@ describe("createVoiceSkillFile v2", () => {
     expect(skillFile.modelNotes?.preferredQualityModel).toBe("claude-sonnet-4-6");
     expect(skillFile.modelNotes?.corpusSampleCount).toBe(2);
     expect(skillFile.rules?.some((rule) => rule.supportingExamples.length > 0)).toBe(true);
+    expect(skillFile.rules?.some((rule) => rule.rule === "Lead with a concrete claim before the lesson.")).toBe(true);
     expect(skillFile.retrievalHints?.preferredVocabulary).toContain("specific");
+    expect(skillFile.voiceKernel?.length.idealRange).toEqual([60, 70]);
+    expect(skillFile.voiceKernel?.vocabulary.forbiddenModelDefaults).toContain("game-changing");
+    expect(skillFile.linguisticRules.some((rule) => rule.includes("Stay near 60-70 characters"))).toBe(true);
   });
 });
