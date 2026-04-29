@@ -65,13 +65,13 @@ export function ProviderSettingsForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-2xl space-y-5 rounded-ui border border-line bg-white p-5">
+    <form onSubmit={onSubmit} className="space-y-5 spool-plate p-5">
       <label className="block space-y-1">
         <span className="text-sm font-medium text-ink">Provider</span>
         <select
           value={config.provider || "anthropic"}
           onChange={(event) => update("provider", event.target.value as ProviderName)}
-          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          className="w-full spool-field px-3 py-2 text-sm"
         >
           {PROVIDERS.map((provider) => (
             <option key={provider.value} value={provider.value}>
@@ -79,7 +79,7 @@ export function ProviderSettingsForm() {
             </option>
           ))}
         </select>
-        <span className="inline-flex rounded-ui border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">
+        <span className="spool-stamp mt-2">
           {mode.label}: {mode.description}
         </span>
       </label>
@@ -89,7 +89,7 @@ export function ProviderSettingsForm() {
         <input
           value={config.model || ""}
           onChange={(event) => update("model", event.target.value)}
-          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          className="w-full spool-field px-3 py-2 text-sm"
           placeholder={defaultModelForProvider(config.provider) || "Required for OpenAI-compatible local providers"}
         />
         {config.provider === "anthropic" ? (
@@ -102,7 +102,7 @@ export function ProviderSettingsForm() {
         <input
           value={config.baseUrl || ""}
           onChange={(event) => update("baseUrl", event.target.value)}
-          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          className="w-full spool-field px-3 py-2 text-sm"
           placeholder="Only required for OpenAI-compatible providers"
         />
       </label>
@@ -115,7 +115,7 @@ export function ProviderSettingsForm() {
           step={1024}
           value={config.contextWindowTokens || ""}
           onChange={(event) => update("contextWindowTokens", event.target.value ? Number(event.target.value) : undefined)}
-          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          className="w-full spool-field px-3 py-2 text-sm"
           placeholder="Optional. LM Studio default is often 4096."
         />
         <span className="text-xs text-muted">Leave blank for auto. Use the context size you loaded in your local model settings.</span>
@@ -126,7 +126,7 @@ export function ProviderSettingsForm() {
         <input
           value={config.embeddingModel || ""}
           onChange={(event) => update("embeddingModel", event.target.value)}
-          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          className="w-full spool-field px-3 py-2 text-sm"
           placeholder="Optional. Defaults to text-embedding-3-small."
         />
         <span className="text-xs text-muted">Used for hybrid semantic retrieval when OpenAI or OpenAI-compatible embeddings are available.</span>
@@ -138,13 +138,13 @@ export function ProviderSettingsForm() {
           type="password"
           value={config.apiKey || ""}
           onChange={(event) => update("apiKey", event.target.value)}
-          className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+          className="w-full spool-field px-3 py-2 text-sm"
           placeholder="Stored only in this browser"
         />
       </label>
 
       <div className="flex items-center gap-3">
-        <button type="submit" className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white">
+        <button type="submit" className="spool-button">
           Save local settings
         </button>
         {saved ? <span className="text-sm text-good">Saved in localStorage.</span> : null}

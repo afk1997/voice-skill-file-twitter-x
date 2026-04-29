@@ -120,8 +120,8 @@ export function TweetStudio({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[380px_1fr]">
-      <form ref={formRef} onSubmit={onSubmit} className="h-fit space-y-5 rounded-ui border border-line bg-white p-5">
-        <div className="rounded-ui border border-line bg-surface p-3">
+      <form ref={formRef} onSubmit={onSubmit} className="h-fit space-y-5 spool-plate p-5">
+        <div className="spool-plate-soft p-3">
           <p className="text-xs font-semibold uppercase text-muted">Generation Mode</p>
           <p className="mt-1 text-sm font-medium text-ink">{mode.label}</p>
           <p className="mt-1 text-xs leading-5 text-muted">{mode.description}</p>
@@ -132,7 +132,7 @@ export function TweetStudio({
           ) : null}
         </div>
 
-        <div className="rounded-ui border border-line bg-surface p-3">
+        <div className="spool-plate-soft p-3">
           <p className="text-xs font-semibold uppercase text-muted">Voice Evidence</p>
           <p className="mt-1 text-sm font-medium text-ink">
             {skillFileVersion} · {skillHealth.label}
@@ -155,14 +155,14 @@ export function TweetStudio({
             required
             value={context}
             onChange={(event) => setContext(event.target.value)}
-            className="min-h-36 w-full rounded-ui border border-line px-3 py-2 text-sm"
+            className="min-h-36 w-full spool-field px-3 py-2 text-sm"
             placeholder="What should the tweet be about?"
           />
         </label>
 
         <label className="block space-y-1">
           <span className="text-sm font-medium text-ink">Tweet type</span>
-          <select value={tweetType} onChange={(event) => setTweetType(event.target.value as (typeof TWEET_TYPES)[number])} className="w-full rounded-ui border border-line px-3 py-2 text-sm">
+          <select value={tweetType} onChange={(event) => setTweetType(event.target.value as (typeof TWEET_TYPES)[number])} className="w-full spool-field px-3 py-2 text-sm">
             {TWEET_TYPES.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -179,18 +179,18 @@ export function TweetStudio({
             max={10}
             value={variations}
             onChange={(event) => setVariations(Number(event.target.value))}
-            className="w-full rounded-ui border border-line px-3 py-2 text-sm"
+            className="w-full spool-field px-3 py-2 text-sm"
           />
         </label>
 
         <label className="block space-y-1">
           <span className="text-sm font-medium text-ink">Optional notes</span>
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="min-h-24 w-full rounded-ui border border-line px-3 py-2 text-sm" />
+          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="min-h-24 w-full spool-field px-3 py-2 text-sm" />
         </label>
 
         {error ? <p className="text-sm text-weak">{error}</p> : null}
 
-        <button type="submit" disabled={loading} className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+        <button type="submit" disabled={loading} className="spool-button disabled:opacity-60">
           {loading ? "Generating..." : `Generate top ${variations} tweets`}
         </button>
         <p className="text-xs leading-5 text-muted">
@@ -200,15 +200,15 @@ export function TweetStudio({
 
       <section className="space-y-4">
         {generations.length === 0 ? (
-          <div className="rounded-ui border border-line bg-panel p-5">
+          <div className="spool-plate p-5">
             <h2 className="font-semibold text-ink">Generated tweets will appear here</h2>
             <p className="mt-2 text-sm text-muted">Each draft is retrieved from real examples, scored, reranked, and ready for feedback.</p>
           </div>
         ) : (
           generations.map((generation) => (
-            <article key={generation.id} className="space-y-4 rounded-ui border border-line bg-white p-5">
+            <article key={generation.id} className="space-y-4 spool-plate p-5">
               {generation.issuesJson?.revisedFromGenerationId ? (
-                <p className="rounded-ui bg-good/10 px-3 py-2 text-xs font-semibold uppercase text-good">Revised draft</p>
+                <p className="spool-stamp bg-good/10 text-good">Revised draft</p>
               ) : null}
               {generation.issuesJson?.revisionNote ? (
                 <p className="rounded-ui border border-line bg-surface px-3 py-2 text-xs leading-5 text-muted">
@@ -217,7 +217,7 @@ export function TweetStudio({
               ) : null}
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <p className="whitespace-pre-wrap text-base leading-7 text-ink">{generation.outputText}</p>
-                <div className="shrink-0 rounded-ui bg-panel px-3 py-2 text-right">
+                <div className="shrink-0 border-[1.5px] border-ink bg-surface px-3 py-2 text-right shadow-stamp">
                   <p className={`text-xl font-semibold ${scoreClass(generation.score)}`}>{generation.score}</p>
                   <p className="text-xs text-muted">{generation.scoreLabel}</p>
                 </div>
@@ -225,7 +225,7 @@ export function TweetStudio({
               {generation.reason ? <p className="text-sm text-muted">{generation.reason}</p> : null}
               <div className="grid gap-3 md:grid-cols-2">
                 {generation.issuesJson?.componentScores ? (
-                  <div className="rounded-ui border border-line bg-surface p-3">
+                  <div className="spool-plate-soft p-3">
                     <p className="text-xs font-semibold uppercase text-muted">Score breakdown</p>
                     <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
                       {Object.entries(generation.issuesJson.componentScores).map(([key, value]) => (
@@ -238,7 +238,7 @@ export function TweetStudio({
                   </div>
                 ) : null}
                 {generation.issuesJson?.styleDistance ? (
-                  <div className="rounded-ui border border-line bg-surface p-3">
+                  <div className="spool-plate-soft p-3">
                     <p className="text-xs font-semibold uppercase text-muted">Style distance</p>
                     <p className="mt-1 text-sm font-semibold text-ink">{generation.issuesJson.styleDistance.score}/100</p>
                     <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -271,7 +271,7 @@ export function TweetStudio({
                 <p className="text-sm text-muted">Revision direction: {generation.issuesJson.suggestedRevisionDirection}</p>
               ) : null}
               {generation.issuesJson?.provenance?.selectedExamples?.length ? (
-                <details className="rounded-ui border border-line bg-surface p-3">
+                <details className="spool-plate-soft p-3">
                   <summary className="cursor-pointer text-sm font-medium text-ink">
                     Evidence used
                     {generation.issuesJson.provenance.retrievalMode ? (

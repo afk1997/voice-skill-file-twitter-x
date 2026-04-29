@@ -148,7 +148,7 @@ export function FeedbackButtons({
             id={`feedback-note-${generationId}`}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            className="min-h-20 w-full rounded-ui border border-line px-3 py-2 text-sm font-normal"
+            className="min-h-20 w-full spool-field px-3 py-2 text-sm font-normal"
             placeholder="No em dashes, less hype, mention LPs, keep the idea but make it sharper..."
           />
         </label>
@@ -158,7 +158,7 @@ export function FeedbackButtons({
             id={`feedback-reason-${generationId}`}
             value={selectedReason}
             onChange={(event) => setSelectedReason(event.target.value)}
-            className="w-full rounded-ui border border-line px-3 py-2 text-sm font-normal"
+            className="w-full spool-field px-3 py-2 text-sm font-normal"
           >
             <option value={NOTE_ONLY_FEEDBACK_LABEL}>Use note only</option>
             {FEEDBACK_ACTIONS.map((action) => (
@@ -170,12 +170,12 @@ export function FeedbackButtons({
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-ui border border-line bg-surface p-3">
+      <div className="flex flex-wrap items-center gap-2 spool-plate-soft p-3">
         <button
           type="button"
           onClick={() => reviseDraft()}
           disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
-          className="inline-flex items-center gap-2 rounded-ui bg-ink px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="spool-button disabled:opacity-40"
         >
           <RotateCcw size={16} aria-hidden="true" />
           {revisionLoading ? "Revising..." : "Revise with note"}
@@ -184,7 +184,7 @@ export function FeedbackButtons({
           type="button"
           onClick={() => submit(selectedReason, { previewOnly: true })}
           disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
-          className="inline-flex items-center gap-2 rounded-ui border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink disabled:opacity-40"
+          className="spool-button-secondary disabled:opacity-40"
         >
           <Eye size={16} aria-hidden="true" />
           {loadingLabel || revisionLoading ? "Previewing..." : "Preview Skill File patch"}
@@ -199,7 +199,7 @@ export function FeedbackButtons({
             type="button"
             onClick={() => submit(action.label)}
             disabled={Boolean(loadingLabel) || revisionLoading}
-            className="inline-flex items-center gap-2 rounded-ui border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink disabled:opacity-60"
+            className="spool-button-secondary disabled:opacity-60"
           >
             {action.label === REJECT_FEEDBACK_LABEL ? null : <Check size={16} aria-hidden="true" />}
             {loadingLabel === action.label ? "Saving..." : action.label === REJECT_FEEDBACK_LABEL ? "Reject draft" : "Approve"}
@@ -225,7 +225,7 @@ export function FeedbackButtons({
               type="button"
               onClick={() => submit(selectedReason, { reviseAfter: true })}
               disabled={Boolean(loadingLabel) || revisionLoading}
-              className="inline-flex items-center gap-2 rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
+              className="spool-button disabled:opacity-60"
             >
               <Sparkles size={14} aria-hidden="true" />
               {loadingLabel || revisionLoading ? "Applying feedback..." : "Teach voice & revise"}
@@ -234,7 +234,7 @@ export function FeedbackButtons({
               type="button"
               onClick={() => submit(selectedReason)}
               disabled={Boolean(loadingLabel) || revisionLoading}
-              className="inline-flex items-center gap-2 rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink disabled:opacity-60"
+              className="spool-button-secondary disabled:opacity-60"
             >
               <Save size={14} aria-hidden="true" />
               Apply patch only
@@ -242,7 +242,7 @@ export function FeedbackButtons({
             <button
               type="button"
               onClick={() => setPreview(null)}
-              className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-muted hover:text-ink"
+              className="spool-button-secondary"
             >
               Keep editing feedback
             </button>
@@ -276,18 +276,18 @@ export function FeedbackButtons({
                   type="button"
                   onClick={() => reviseDraft()}
                   disabled={revisionLoading}
-                  className="inline-flex items-center gap-2 rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
+                  className="spool-button disabled:opacity-60"
                 >
                   <RotateCcw size={14} aria-hidden="true" />
                   {revisionLoading ? "Applying fixes..." : "Revise using saved feedback"}
                 </button>
               ) : null}
-              <button type="button" onClick={onGenerateAnother} className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink">
+              <button type="button" onClick={onGenerateAnother} className="spool-button-secondary">
                 Generate fresh batch
               </button>
               <Link
                 href={`/brands/${result.skillFile.brandId || brandId}/skill-file`}
-                className="rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink"
+                className="spool-button-secondary"
               >
                 Review skill file
               </Link>
