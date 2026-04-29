@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SkillFileEditor } from "@/components/skill-file/SkillFileEditor";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { prisma } from "@/lib/db";
 import { parseJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
@@ -31,16 +32,16 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4 border-b border-line pb-6">
-        <div>
-          <p className="text-sm font-medium text-accent">{brand.name}</p>
-          <h1 className="mt-2 text-3xl font-semibold text-ink">Voice Skill File</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">The reusable JSON voice artifact. Saving edits creates a new version.</p>
-        </div>
-        <Link href={`/brands/${brand.id}`} className="text-sm text-muted hover:text-ink">
-          Brand dashboard
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow={brand.name}
+        title="Skill File"
+        description="The reusable JSON voice artifact. Saving edits creates a new version."
+        actions={
+          <Link href={`/brands/${brand.id}`} className="spool-button-secondary text-sm">
+            Brand dashboard
+          </Link>
+        }
+      />
 
       {skillFile ? (
         <div className="space-y-3">
@@ -58,7 +59,7 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
           <SkillFileEditor brandId={brand.id} skillFile={skillFile} versionDiff={versionDiff} />
         </div>
       ) : (
-        <div className="rounded-ui border border-line bg-panel p-5">
+        <div className="spool-plate p-5">
           <h2 className="font-semibold text-ink">No skill file yet</h2>
           <p className="mt-2 text-sm text-muted">Upload samples and analyze the brand voice to create the first Voice Skill File.</p>
           <Link href={`/brands/${brand.id}/voice-report`} className="mt-4 inline-flex rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white">

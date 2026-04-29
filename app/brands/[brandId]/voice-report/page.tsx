@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AnalyzeVoicePanel } from "@/components/voice-report/AnalyzeVoicePanel";
 import { prisma } from "@/lib/db";
 import { parseJsonField } from "@/lib/request";
@@ -19,16 +20,16 @@ export default async function VoiceReportPage({ params }: { params: Promise<{ br
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4 border-b border-line pb-6">
-        <div>
-          <p className="text-sm font-medium text-accent">{brand.name}</p>
-          <h1 className="mt-2 text-3xl font-semibold text-ink">Voice Report</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Turn useful writing samples into a structured report and a reusable Voice Skill File.</p>
-        </div>
-        <Link href={`/brands/${brand.id}`} className="text-sm text-muted hover:text-ink">
-          Brand dashboard
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow={brand.name}
+        title="Voice Report"
+        description="Turn useful writing samples into a structured report and reusable Skill File."
+        actions={
+          <Link href={`/brands/${brand.id}`} className="spool-button-secondary text-sm">
+            Brand dashboard
+          </Link>
+        }
+      />
       <AnalyzeVoicePanel brandId={brand.id} initialReport={initialReport} />
     </div>
   );

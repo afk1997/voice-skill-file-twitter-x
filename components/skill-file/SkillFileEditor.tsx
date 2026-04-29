@@ -46,21 +46,21 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
 
   return (
     <div className="space-y-4">
-      <section className="space-y-4 rounded-ui border border-line bg-white p-5">
+      <section className="space-y-4 spool-plate p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">Voice Skill File</p>
             <h2 className="mt-1 text-xl font-semibold text-ink">{skillFile.brandName}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{skillFile.voiceSummary}</p>
           </div>
-          <div className="rounded-ui border border-line px-3 py-2 text-sm text-muted">
+          <div className="spool-stamp">
             {skillFile.version}
             {skillFile.schemaVersion ? <span className="ml-2 text-xs">schema {skillFile.schemaVersion}</span> : null}
           </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-ui border border-line bg-surface p-3">
+          <div className="spool-plate-soft p-3">
             <p className="text-xs font-medium uppercase text-muted">Strongest Rules</p>
             <ul className="mt-2 space-y-2 text-sm text-ink">
               {rules.slice(0, 4).map((rule) => (
@@ -69,17 +69,17 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
               {rules.length === 0 ? <li>No structured rules yet.</li> : null}
             </ul>
           </div>
-          <div className="rounded-ui border border-line bg-surface p-3">
+          <div className="spool-plate-soft p-3">
             <p className="text-xs font-medium uppercase text-muted">Retrieval Hints</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {(retrievalHints?.preferredVocabulary ?? skillFile.preferredPhrases).slice(0, 10).map((phrase) => (
-                <span key={phrase} className="rounded-ui bg-white px-2 py-1 text-xs text-ink">
+                <span key={phrase} className="border border-line bg-light px-2 py-1 text-xs text-ink">
                   {phrase}
                 </span>
               ))}
             </div>
           </div>
-          <div className="rounded-ui border border-line bg-surface p-3">
+          <div className="spool-plate-soft p-3">
             <p className="text-xs font-medium uppercase text-muted">Learning Library</p>
             <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
               <div>
@@ -103,7 +103,7 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
         </div>
 
         {voiceKernel ? (
-          <div className="rounded-ui border border-line bg-surface p-4">
+          <div className="spool-plate-soft p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-medium uppercase text-muted">Voice Kernel</p>
@@ -146,7 +146,7 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
                 <p className="text-xs font-medium uppercase text-muted">Model-default bans</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {voiceKernel.vocabulary.forbiddenModelDefaults.slice(0, 8).map((phrase) => (
-                    <span key={phrase} className="rounded-ui bg-white px-2 py-1 text-xs text-ink">
+                    <span key={phrase} className="border border-line bg-light px-2 py-1 text-xs text-ink">
                       {phrase}
                     </span>
                   ))}
@@ -162,7 +162,7 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
         ) : null}
 
         {versionDiff ? (
-          <div className="rounded-ui border border-line bg-surface p-4">
+          <div className="spool-plate-soft p-4">
             <p className="text-xs font-medium uppercase text-muted">Version Diff</p>
             <h3 className="mt-1 text-base font-semibold text-ink">{versionDiff.title}</h3>
             {versionDiff.items.length ? (
@@ -181,11 +181,11 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
-        className="min-h-[620px] w-full rounded-ui border border-line bg-white p-4 font-mono text-sm leading-6 text-ink"
+        className="spool-field min-h-[620px] w-full p-4 font-mono text-sm leading-6"
         spellCheck={false}
       />
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={loading} className="rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+        <button onClick={save} disabled={loading} className="spool-button disabled:opacity-60">
           {loading ? "Saving..." : "Save new version"}
         </button>
         {message ? <span className="text-sm text-good">{message}</span> : null}
