@@ -9,11 +9,12 @@
   --light: #fef7e3;
   --surface: #fff9ea;
   --ink: #1a3540;
-  --muted: rgba(26, 53, 64, 0.68);
+  --muted: #406570;
   --panel: #fef7e3;
   --accent: #ff5728;
   --accent-text: #8f2a17;
   --orange: #ff5728;
+  --button-ink: #0d2028;
   --good: #1f7a3f;
   --forest: #1f7a3f;
   --warn: #b45309;
@@ -101,7 +102,7 @@ button {
     border: 1.5px solid var(--ink);
     background: var(--orange);
     box-shadow: 3px 3px 0 var(--ink);
-    color: var(--light);
+    color: var(--button-ink);
     display: inline-flex;
     align-items: center;
     justify-content: center;

@@ -8,7 +8,7 @@ const config: Config = {
         paper: "#f1e6cc",
         light: "#fef7e3",
         ink: "#1a3540",
-        muted: "rgba(26, 53, 64, 0.68)",
+        muted: "#406570",
         panel: "#fef7e3",
         surface: "#fff9ea",
         line: "rgba(26, 53, 64, 0.2)",
