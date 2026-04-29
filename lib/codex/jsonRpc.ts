@@ -62,7 +62,9 @@ export class CodexJsonRpcPeer {
     const handlers = this.notificationHandlers.get(method) ?? new Set<NotificationHandler>();
     handlers.add(handler);
     this.notificationHandlers.set(method, handlers);
-    return () => handlers.delete(handler);
+    return () => {
+      handlers.delete(handler);
+    };
   }
 
   handleLine(line: string) {

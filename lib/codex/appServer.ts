@@ -213,7 +213,7 @@ export async function generateTextWithCodex({ prompt, model }: { prompt: string;
     if (!turnId) throw new Error("Codex app-server did not return a turn id.");
 
     await new Promise<void>((resolve, reject) => {
-      let cleanup = () => undefined;
+      let cleanup: () => void = () => undefined;
       const timeout = setTimeout(() => {
         cleanup();
         reject(new Error("Codex Local generation timed out."));
