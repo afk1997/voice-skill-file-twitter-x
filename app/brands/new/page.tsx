@@ -1,12 +1,14 @@
 import { BrandForm } from "@/components/brands/BrandForm";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function NewBrandPage() {
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-ink">Create Brand Voice Workspace</h1>
-        <p className="mt-2 text-sm text-muted">Capture the context the voice file should preserve.</p>
-      </div>
+    <div className="max-w-4xl space-y-6">
+      <PageHeader
+        eyebrow="New workspace"
+        title="Create Brand Voice Workspace"
+        description="Capture the context the voice file should preserve."
+      />
       <BrandForm />
     </div>
   );
