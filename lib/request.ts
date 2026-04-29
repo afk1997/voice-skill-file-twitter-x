@@ -17,13 +17,25 @@ export function jsonErrorFromUnknown(error: unknown, fallbackMessage: string, st
 export function providerConfigFromBody(body: { providerConfig?: LlmProviderConfig }): LlmProviderConfig {
   const supplied = body.providerConfig ?? {};
   const contextWindowTokens = Number(supplied.contextWindowTokens);
+  const validContextWindowTokens = Number.isFinite(contextWindowTokens) && contextWindowTokens > 0 ? contextWindowTokens : undefined;
+  if (supplied.provider === "codex-local") {
+    return {
+      provider: supplied.provider,
+      apiKey: undefined,
+      model: supplied.model,
+      embeddingModel: undefined,
+      baseUrl: undefined,
+      contextWindowTokens: validContextWindowTokens,
+    };
+  }
+
   return {
     provider: supplied.provider,
     apiKey: supplied.apiKey,
     model: supplied.model,
     embeddingModel: supplied.embeddingModel,
     baseUrl: supplied.baseUrl,
-    contextWindowTokens: Number.isFinite(contextWindowTokens) && contextWindowTokens > 0 ? contextWindowTokens : undefined,
+    contextWindowTokens: validContextWindowTokens,
   };
 }
 

@@ -12,6 +12,7 @@ const PROVIDERS: { value: ProviderName; label: string }[] = [
   { value: "openai", label: "OpenAI" },
   { value: "openrouter", label: "OpenRouter" },
   { value: "openai-compatible", label: "OpenAI-compatible" },
+  { value: "codex-local", label: "Codex Local" },
 ];
 
 const DEFAULT_CONFIG: LlmProviderConfig = {

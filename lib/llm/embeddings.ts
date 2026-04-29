@@ -20,6 +20,7 @@ function embeddingProviderFromEnv(): ProviderName | undefined {
 }
 
 function resolveEmbeddingProvider(config: LlmProviderConfig): ProviderName | undefined {
+  if (config.provider === "codex-local") return undefined;
   if (config.provider === "openai" || config.provider === "openai-compatible") return config.provider;
   return embeddingProviderFromEnv();
 }

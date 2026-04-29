@@ -1,7 +1,7 @@
 import type { LlmProviderConfig, ProviderName } from "@/lib/types";
 
 export type ProviderMode = {
-  label: "Setup Required" | "Quality" | "Alternate" | "Local Draft";
+  label: "Setup Required" | "Quality" | "Alternate" | "Local Draft" | "Codex Local";
   description: string;
   isQualityMode: boolean;
   isLocalDraftMode: boolean;
@@ -16,6 +16,7 @@ export function defaultModelForProvider(provider?: ProviderName) {
   if (provider === "openai") return "gpt-5.4";
   if (provider === "openrouter") return "anthropic/claude-sonnet-4.6";
   if (provider === "openai-compatible") return "";
+  if (provider === "codex-local") return "gpt-5.4";
   return "claude-sonnet-4-6";
 }
 
@@ -52,6 +53,15 @@ export function providerModeForConfig(config: LlmProviderConfig, options: Provid
       description: "Server environment provider is configured. Quality depends on the selected model.",
       isQualityMode: false,
       isLocalDraftMode: false,
+    };
+  }
+
+  if (config.provider === "codex-local") {
+    return {
+      label: "Codex Local",
+      description: "Uses your local Codex ChatGPT sign-in. Requires this app to run on your machine.",
+      isQualityMode: false,
+      isLocalDraftMode: true,
     };
   }
 

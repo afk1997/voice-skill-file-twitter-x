@@ -185,7 +185,7 @@ export type VoiceSkillFile = {
   updatedAt: string;
 };
 
-export type ProviderName = "anthropic" | "openai" | "openrouter" | "openai-compatible";
+export type ProviderName = "anthropic" | "openai" | "openrouter" | "openai-compatible" | "codex-local";
 
 export type LlmProviderConfig = {
   provider?: ProviderName;

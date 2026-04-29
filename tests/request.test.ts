@@ -22,4 +22,25 @@ describe("providerConfigFromBody", () => {
       }),
     ).toMatchObject({ provider: "openai-compatible", contextWindowTokens: 32768 });
   });
+
+  it("preserves Codex Local provider config without requiring browser credentials", () => {
+    expect(
+      providerConfigFromBody({
+        providerConfig: {
+          provider: "codex-local",
+          model: "gpt-5.4",
+          apiKey: "ignored-browser-key",
+          baseUrl: "http://localhost:9999",
+          embeddingModel: "ignored-embedding-model",
+        },
+      }),
+    ).toEqual({
+      provider: "codex-local",
+      apiKey: undefined,
+      model: "gpt-5.4",
+      embeddingModel: undefined,
+      baseUrl: undefined,
+      contextWindowTokens: undefined,
+    });
+  });
 });

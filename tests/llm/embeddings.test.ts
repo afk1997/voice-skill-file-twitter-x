@@ -45,5 +45,6 @@ describe("LLM embeddings client", () => {
     expect(hasUsableEmbeddingProvider({ provider: "openai", apiKey: "key" })).toBe(true);
     expect(hasUsableEmbeddingProvider({ provider: "openai-compatible", apiKey: "key", baseUrl: "http://localhost:1234/v1" })).toBe(true);
     expect(hasUsableEmbeddingProvider({ provider: "anthropic", apiKey: "key" })).toBe(false);
+    expect(hasUsableEmbeddingProvider({ provider: "codex-local" })).toBe(false);
   });
 });

@@ -61,6 +61,16 @@ describe("providerMode", () => {
     });
   });
 
+  it("labels Codex Local as a local provider without a browser API key", () => {
+    expect(defaultModelForProvider("codex-local")).toBe("gpt-5.4");
+    expect(providerModeForConfig({ provider: "codex-local" })).toEqual({
+      label: "Codex Local",
+      description: "Uses your local Codex ChatGPT sign-in. Requires this app to run on your machine.",
+      isQualityMode: false,
+      isLocalDraftMode: true,
+    });
+  });
+
   it("sizes internal candidate pools above the requested count", () => {
     expect(candidatePoolSize(1)).toBe(8);
     expect(candidatePoolSize(3)).toBe(8);
