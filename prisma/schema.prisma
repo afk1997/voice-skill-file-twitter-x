@@ -26,6 +26,9 @@ model Brand {
   voiceReports   VoiceReportRecord[]
   skillFiles     SkillFile[]
   generations    Generation[]
+  ruleBankRules  RuleBankRule[]
+  ruleSelections BrandRuleSelection[]
+  ruleApplications RuleApplication[]
 }
 
 model Upload {
@@ -81,6 +84,9 @@ model SkillFile {
   skillJson String
   createdAt DateTime @default(now())
 
+  baseRuleApplications   RuleApplication[] @relation("RuleApplicationBaseSkillFile")
+  resultRuleApplications RuleApplication[] @relation("RuleApplicationResultSkillFile")
+
   @@index([brandId, createdAt])
 }
 
@@ -113,4 +119,105 @@ model AppSetting {
   key       String   @id
   valueJson String
   updatedAt DateTime @updatedAt
+}
+
+enum RuleSource {
+  STARTER @map("starter")
+  CUSTOM  @map("custom")
+}
+
+enum RuleScope {
+  GLOBAL @map("global")
+  BRAND  @map("brand")
+}
+
+enum RuleMode {
+  GUIDANCE        @map("guidance")
+  HARD_CONSTRAINT @map("hard_constraint")
+  BANNED_PHRASE   @map("banned_phrase")
+  RETRIEVAL_HINT  @map("retrieval_hint")
+}
+
+enum RuleCategory {
+  FORMAT_FIT      @map("format_fit")
+  SPECIFICITY     @map("specificity")
+  FACT_DISCIPLINE @map("fact_discipline")
+  REGULARITY      @map("regularity")
+  PLAIN_LANGUAGE  @map("plain_language")
+  FORMULA_PHRASES @map("formula_phrases")
+  ACCESSIBILITY   @map("accessibility")
+  STANCE_VOICE    @map("stance_voice")
+  PROVENANCE      @map("provenance")
+}
+
+enum RuleTarget {
+  SKILL_RULES                    @map("skill_rules")
+  LINGUISTIC_RULES               @map("linguistic_rules")
+  AVOIDED_PHRASES                @map("avoided_phrases")
+  RETRIEVAL_PREFERRED_TOPICS     @map("retrieval_preferred_topics")
+  RETRIEVAL_PREFERRED_STRUCTURES @map("retrieval_preferred_structures")
+  RETRIEVAL_PREFERRED_VOCABULARY @map("retrieval_preferred_vocabulary")
+  RETRIEVAL_AVOID_VOCABULARY     @map("retrieval_avoid_vocabulary")
+}
+
+enum RuleApplicationStatus {
+  PREVIEWED @map("previewed")
+  APPLIED   @map("applied")
+  DISCARDED @map("discarded")
+}
+
+model RuleBankRule {
+  id          String       @id
+  title       String
+  body        String
+  category    RuleCategory
+  mode        RuleMode
+  source      RuleSource
+  scope       RuleScope
+  brandId     String?
+  brand       Brand?       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  targetJson  String
+  payloadJson String
+  enabled     Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  selections BrandRuleSelection[]
+
+  @@index([source, scope, enabled])
+  @@index([brandId])
+}
+
+model BrandRuleSelection {
+  id           String       @id @default(cuid())
+  brandId      String
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  ruleId       String
+  rule         RuleBankRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  selected     Boolean      @default(false)
+  overrideJson String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([brandId, ruleId])
+  @@index([brandId, selected])
+}
+
+model RuleApplication {
+  id                   String                @id @default(cuid())
+  brandId              String
+  brand                Brand                 @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  status               RuleApplicationStatus
+  selectedRuleIdsJson  String
+  previewPatchJson     String
+  baseSkillFileId      String
+  baseSkillFileVersion String
+  baseSkillFile        SkillFile             @relation("RuleApplicationBaseSkillFile", fields: [baseSkillFileId], references: [id], onDelete: Restrict)
+  resultSkillFileId    String?
+  resultSkillFile      SkillFile?            @relation("RuleApplicationResultSkillFile", fields: [resultSkillFileId], references: [id], onDelete: SetNull)
+  createdAt            DateTime              @default(now())
+  appliedAt            DateTime?
+
+  @@index([brandId, createdAt])
+  @@index([status])
 }

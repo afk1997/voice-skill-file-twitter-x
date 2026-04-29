@@ -1,6 +1,9 @@
 import { prisma } from "../lib/db";
+import { seedStarterRules } from "../lib/rules/seedStarterRules";
 
 async function main() {
+  await seedStarterRules(prisma);
+
   const count = await prisma.brand.count();
   if (count > 0) {
     return;
