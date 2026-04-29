@@ -1,11 +1,7 @@
 import { STARTER_RULES } from "@/lib/rules/starterRules";
 
 type RuleBankRuleClient = {
-  upsert: (args: {
-    where: { id: string };
-    update: Record<string, unknown>;
-    create: Record<string, unknown>;
-  }) => Promise<unknown>;
+  upsert: (args: any) => Promise<unknown>;
 };
 
 export async function seedStarterRules(prisma: { ruleBankRule: RuleBankRuleClient }) {
