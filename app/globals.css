@@ -1,19 +1,45 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --paper: #f1e6cc;
+  --light: #fef7e3;
+  --surface: #fff9ea;
+  --ink: #1a3540;
+  --orange: #ff5728;
+  --forest: #1f7a3f;
+  --line: rgba(26, 53, 64, 0.2);
+  --halftone: rgba(255, 87, 40, 0.04);
+}
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: light;
+}
+
 body {
   margin: 0;
-  background: #ffffff;
-  color: #111827;
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(26, 53, 64, 0.05) 0.5px, transparent 1px),
+    radial-gradient(circle at 78% 38%, rgba(26, 53, 64, 0.06) 0.5px, transparent 1px),
+    radial-gradient(circle at 32% 76%, rgba(26, 53, 64, 0.05) 0.5px, transparent 1px),
+    repeating-radial-gradient(circle at 0 0, var(--halftone) 0 0.8px, transparent 0.8px 6px);
+  background-size: 4px 4px, 5px 5px, 6px 6px, 6px 6px;
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
+  color: inherit;
   text-decoration: none;
 }
 
@@ -22,4 +48,100 @@ input,
 select,
 button {
   font: inherit;
+}
+
+::selection {
+  background: var(--orange);
+  color: var(--light);
+}
+
+@layer components {
+  .spool-rule {
+    border-color: var(--ink);
+    border-top-width: 1.5px;
+    border-bottom-width: 1.5px;
+  }
+
+  .spool-plate {
+    border: 1.5px solid var(--ink);
+    background: var(--light);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+
+  .spool-plate-soft {
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+  }
+
+  .spool-stamp {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border: 1.5px solid var(--orange);
+    background: rgba(255, 87, 40, 0.07);
+    color: var(--orange);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1;
+    padding: 6px 9px;
+    text-transform: uppercase;
+    transform: rotate(-1.5deg);
+  }
+
+  .spool-button {
+    border: 1.5px solid var(--ink);
+    background: var(--orange);
+    box-shadow: 3px 3px 0 var(--ink);
+    color: var(--light);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    min-height: 2.5rem;
+    padding: 0.55rem 1rem;
+    text-transform: none;
+    transition: transform 80ms ease-out, box-shadow 120ms ease-out;
+  }
+
+  .spool-button:hover {
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+
+  .spool-button:active {
+    box-shadow: none;
+    transform: translate(3px, 3px);
+  }
+
+  .spool-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .spool-button-secondary {
+    border: 1.5px solid var(--ink);
+    background: var(--light);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-height: 2.5rem;
+    padding: 0.55rem 1rem;
+  }
+
+  .spool-field {
+    border: 1.5px solid var(--ink);
+    background: var(--light);
+    color: var(--ink);
+  }
+
+  .spool-field:focus {
+    border-color: var(--orange);
+    outline: 2px dashed rgba(255, 87, 40, 0.45);
+    outline-offset: 2px;
+  }
 }
