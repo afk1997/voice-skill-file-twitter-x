@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CodexLocalPanel } from "@/components/settings/CodexLocalPanel";
 import { readApiJson } from "@/lib/http/readApiJson";
 import { defaultModelForProvider, providerModeForConfig } from "@/lib/llm/providerMode";
 import type { LlmProviderConfig, ProviderName } from "@/lib/types";
@@ -84,6 +85,7 @@ export function ProviderSettingsForm() {
           {mode.label}: {mode.description}
         </span>
       </label>
+      {config.provider === "codex-local" ? <CodexLocalPanel /> : null}
 
       <label className="block space-y-1">
         <span className="text-sm font-medium text-ink">Model</span>
@@ -93,56 +95,62 @@ export function ProviderSettingsForm() {
           className="w-full spool-field px-3 py-2 text-sm"
           placeholder={defaultModelForProvider(config.provider) || "Required for OpenAI-compatible local providers"}
         />
-        {config.provider === "anthropic" ? (
+        {config.provider === "codex-local" ? (
+          <span className="text-xs text-muted">Defaults to gpt-5.4 through your local Codex app-server.</span>
+        ) : config.provider === "anthropic" ? (
           <span className="text-xs text-muted">Recommended quality model: claude-sonnet-4-6.</span>
         ) : null}
       </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-ink">Base URL</span>
-        <input
-          value={config.baseUrl || ""}
-          onChange={(event) => update("baseUrl", event.target.value)}
-          className="w-full spool-field px-3 py-2 text-sm"
-          placeholder="Only required for OpenAI-compatible providers"
-        />
-      </label>
+      {config.provider !== "codex-local" ? (
+        <>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-ink">Base URL</span>
+            <input
+              value={config.baseUrl || ""}
+              onChange={(event) => update("baseUrl", event.target.value)}
+              className="w-full spool-field px-3 py-2 text-sm"
+              placeholder="Only required for OpenAI-compatible providers"
+            />
+          </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-ink">Context window tokens</span>
-        <input
-          type="number"
-          min={1024}
-          step={1024}
-          value={config.contextWindowTokens || ""}
-          onChange={(event) => update("contextWindowTokens", event.target.value ? Number(event.target.value) : undefined)}
-          className="w-full spool-field px-3 py-2 text-sm"
-          placeholder="Optional. LM Studio default is often 4096."
-        />
-        <span className="text-xs text-muted">Leave blank for auto. Use the context size you loaded in your local model settings.</span>
-      </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-ink">Context window tokens</span>
+            <input
+              type="number"
+              min={1024}
+              step={1024}
+              value={config.contextWindowTokens || ""}
+              onChange={(event) => update("contextWindowTokens", event.target.value ? Number(event.target.value) : undefined)}
+              className="w-full spool-field px-3 py-2 text-sm"
+              placeholder="Optional. LM Studio default is often 4096."
+            />
+            <span className="text-xs text-muted">Leave blank for auto. Use the context size you loaded in your local model settings.</span>
+          </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-ink">Embedding model</span>
-        <input
-          value={config.embeddingModel || ""}
-          onChange={(event) => update("embeddingModel", event.target.value)}
-          className="w-full spool-field px-3 py-2 text-sm"
-          placeholder="Optional. Defaults to text-embedding-3-small."
-        />
-        <span className="text-xs text-muted">Used for hybrid semantic retrieval when OpenAI or OpenAI-compatible embeddings are available.</span>
-      </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-ink">Embedding model</span>
+            <input
+              value={config.embeddingModel || ""}
+              onChange={(event) => update("embeddingModel", event.target.value)}
+              className="w-full spool-field px-3 py-2 text-sm"
+              placeholder="Optional. Defaults to text-embedding-3-small."
+            />
+            <span className="text-xs text-muted">Used for hybrid semantic retrieval when OpenAI or OpenAI-compatible embeddings are available.</span>
+          </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-ink">API key</span>
-        <input
-          type="password"
-          value={config.apiKey || ""}
-          onChange={(event) => update("apiKey", event.target.value)}
-          className="w-full spool-field px-3 py-2 text-sm"
-          placeholder="Stored only in this browser"
-        />
-      </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-ink">API key</span>
+            <input
+              type="password"
+              value={config.apiKey || ""}
+              onChange={(event) => update("apiKey", event.target.value)}
+              className="w-full spool-field px-3 py-2 text-sm"
+              placeholder="Stored only in this browser"
+            />
+          </label>
+        </>
+      ) : null}
 
       <div className="flex items-center gap-3">
         <button type="submit" className="spool-button">
