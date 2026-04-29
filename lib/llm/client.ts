@@ -1,4 +1,5 @@
 import type { LlmProviderConfig, ProviderName } from "@/lib/types";
+import { generateTextWithCodex } from "@/lib/codex/appServer";
 import { defaultModelForProvider } from "@/lib/llm/providerMode";
 
 type GenerateJsonInput = {
@@ -28,6 +29,8 @@ export function providerFromEnv(): ProviderName | undefined {
 }
 
 function resolveProvider(config: LlmProviderConfig): ProviderName | undefined {
+  if (config.provider === "codex-local") return "codex-local";
+
   if (
     config.provider === "anthropic" ||
     config.provider === "openai" ||
@@ -69,11 +72,19 @@ function parseJsonFromModel<T>(text: string): T {
 
 export function hasUsableProvider(config: LlmProviderConfig) {
   const provider = resolveProvider(config);
+  if (provider === "codex-local") return true;
   return Boolean(provider && (config.apiKey || envKey(provider)));
 }
 
 async function generateTextWithLlm({ providerConfig, prompt, preferJsonSchema = false }: GenerateTextInput) {
   const provider = resolveProvider(providerConfig);
+  if (provider === "codex-local") {
+    return generateTextWithCodex({
+      prompt,
+      model: providerConfig.model || defaultModelForProvider(provider),
+    });
+  }
+
   const apiKey = providerConfig.apiKey || envKey(provider);
   if (!provider || !apiKey) {
     throw new Error("A real LLM provider is required. Add a provider key in Settings or .env.local.");
