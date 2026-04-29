@@ -14,7 +14,10 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
   const { brandId } = await params;
   const brand = await prisma.brand.findUnique({
     where: { id: brandId },
-    include: { skillFiles: { orderBy: { createdAt: "desc" }, take: 2 } },
+    include: {
+      skillFiles: { orderBy: { createdAt: "desc" }, take: 2 },
+      ruleApplications: { orderBy: { createdAt: "desc" }, take: 5 },
+    },
   });
   if (!brand) notFound();
 
@@ -37,9 +40,14 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
         title="Skill File"
         description="The reusable JSON voice artifact. Saving edits creates a new version."
         actions={
-          <Link href={`/brands/${brand.id}`} className="spool-button-secondary text-sm">
-            Brand dashboard
-          </Link>
+          <>
+            <Link href={`/brands/${brand.id}/rules`} className="spool-button-secondary text-sm">
+              Rules Bank
+            </Link>
+            <Link href={`/brands/${brand.id}`} className="spool-button-secondary text-sm">
+              Brand dashboard
+            </Link>
+          </>
         }
       />
 
@@ -56,6 +64,19 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
               Open Studio
             </Link>
           </div>
+          {brand.ruleApplications.length ? (
+            <div className="spool-plate-soft p-4">
+              <p className="text-xs font-semibold uppercase text-muted">Recent rule applications</p>
+              <ul className="mt-2 space-y-2 text-sm text-muted">
+                {brand.ruleApplications.map((application) => (
+                  <li key={application.id}>
+                    {application.status.toLowerCase()} against {application.baseSkillFileVersion}
+                    {application.appliedAt ? ` on ${application.appliedAt.toLocaleDateString()}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <SkillFileEditor brandId={brand.id} skillFile={skillFile} versionDiff={versionDiff} />
         </div>
       ) : (

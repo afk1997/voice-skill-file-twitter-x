@@ -46,6 +46,7 @@ export default async function BrandDashboardPage({ params }: { params: Promise<{
     { href: `/brands/${brand.id}/upload`, label: "Upload Content" },
     { href: `/brands/${brand.id}/voice-report`, label: "Analyze Voice" },
     { href: `/brands/${brand.id}/skill-file`, label: "View Skill File" },
+    { href: `/brands/${brand.id}/rules`, label: "Rules Bank" },
     { href: `/brands/${brand.id}/studio`, label: "Open Studio" },
   ];
 
