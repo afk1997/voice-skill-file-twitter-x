@@ -52,8 +52,8 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
                 Voice health: <span className="font-medium text-ink">{skillHealth.label}</span> · {skillHealth.corpusSampleCount.toLocaleString()} corpus samples
               </p>
             </div>
-            <Link href={`/brands/${brand.id}/studio`} className="rounded-ui bg-ink px-4 py-2 text-center text-sm font-medium text-white">
-              Open Tweet Studio
+            <Link href={`/brands/${brand.id}/studio`} className="spool-button text-center text-sm">
+              Open Studio
             </Link>
           </div>
           <SkillFileEditor brandId={brand.id} skillFile={skillFile} versionDiff={versionDiff} />
@@ -61,8 +61,8 @@ export default async function SkillFilePage({ params }: { params: Promise<{ bran
       ) : (
         <div className="spool-plate p-5">
           <h2 className="font-semibold text-ink">No skill file yet</h2>
-          <p className="mt-2 text-sm text-muted">Upload samples and analyze the brand voice to create the first Voice Skill File.</p>
-          <Link href={`/brands/${brand.id}/voice-report`} className="mt-4 inline-flex rounded-ui bg-ink px-4 py-2 text-sm font-medium text-white">
+          <p className="mt-2 text-sm text-muted">Upload samples and analyze the brand voice to create the first Skill File.</p>
+          <Link href={`/brands/${brand.id}/voice-report`} className="spool-button mt-4 text-sm">
             Analyze voice
           </Link>
         </div>

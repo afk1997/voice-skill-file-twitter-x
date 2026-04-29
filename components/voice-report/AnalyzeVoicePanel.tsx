@@ -148,7 +148,7 @@ export function AnalyzeVoicePanel({ brandId, initialReport }: { brandId: string;
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-ink">Voice analysis</h2>
-            <p className="mt-1 text-sm text-muted">Analyze the best useful samples and create the first Voice Skill File if needed.</p>
+            <p className="mt-1 text-sm text-muted">Analyze the best useful samples and create the first Skill File if needed.</p>
             <p className="spool-stamp mt-2">
               {mode.label}: {mode.description}
             </p>

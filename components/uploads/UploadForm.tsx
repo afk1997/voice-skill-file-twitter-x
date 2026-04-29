@@ -91,7 +91,7 @@ export function UploadForm({ brandId }: { brandId: string }) {
           <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="font-semibold text-ink">Next step: analyze the brand voice</h3>
-              <p className="mt-1 text-sm text-muted">Turn these useful samples into a reusable Voice Skill File.</p>
+              <p className="mt-1 text-sm text-muted">Turn these useful samples into a reusable Skill File.</p>
             </div>
             <Link href={`/brands/${brandId}/voice-report`} className="spool-button text-center">
               Analyze voice

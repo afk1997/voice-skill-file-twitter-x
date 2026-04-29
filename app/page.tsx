@@ -33,7 +33,7 @@ export default async function HomePage() {
       <section>
         <h2 className="text-xl font-semibold text-ink">Brand workspaces</h2>
         {brands.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No workspaces yet. Create one to start building a Voice Skill File.</p>
+          <p className="mt-2 text-sm text-muted">No workspaces yet. Create one to start building a Skill File.</p>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {brands.map((brand) => (

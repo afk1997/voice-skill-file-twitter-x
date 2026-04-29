@@ -37,16 +37,16 @@ export default async function BrandDashboardPage({ params }: { params: Promise<{
       : !brand.voiceReports[0]
         ? { href: `/brands/${brand.id}/voice-report`, label: "Analyze Voice", description: "Turn useful samples into a voice report and first Skill File." }
         : !skillJson
-          ? { href: `/brands/${brand.id}/skill-file`, label: "Review Skill File", description: "Inspect the generated Voice Skill File before drafting." }
+          ? { href: `/brands/${brand.id}/skill-file`, label: "Review Skill File", description: "Inspect the generated Skill File before drafting." }
           : skillHealth.isStale || !skillHealth.corpusBacked
             ? { href: `/brands/${brand.id}/voice-report`, label: "Refresh Skill File", description: skillHealth.description }
-          : { href: `/brands/${brand.id}/studio`, label: "Open Tweet Studio", description: `Generate with Skill File ${skillJson.version}.` };
+          : { href: `/brands/${brand.id}/studio`, label: "Open Studio", description: `Generate with Skill File ${skillJson.version}.` };
   const workflowStage = skillJson && skillHealth.corpusBacked && !skillHealth.isStale ? "Generate + Learn" : brand.voiceReports[0] ? "Skill File" : usefulSamples > 0 ? "Analyze" : "Upload";
   const actions = [
     { href: `/brands/${brand.id}/upload`, label: "Upload Content" },
     { href: `/brands/${brand.id}/voice-report`, label: "Analyze Voice" },
     { href: `/brands/${brand.id}/skill-file`, label: "View Skill File" },
-    { href: `/brands/${brand.id}/studio`, label: "Open Tweet Studio" },
+    { href: `/brands/${brand.id}/studio`, label: "Open Studio" },
   ];
 
   return (

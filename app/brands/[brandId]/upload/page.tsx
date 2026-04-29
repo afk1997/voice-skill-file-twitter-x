@@ -41,7 +41,7 @@ export default async function UploadPage({ params }: { params: Promise<{ brandId
           <div>
             <h2 className="text-lg font-semibold text-ink">Ready for voice analysis</h2>
             <p className="mt-1 text-sm text-muted">
-              {usefulSampleCount.toLocaleString()} useful samples are available. Analyze them to create or refresh the Voice Skill File.
+              {usefulSampleCount.toLocaleString()} useful samples are available. Analyze them to create or refresh the Skill File.
             </p>
           </div>
           <Link href={`/brands/${brand.id}/voice-report`} className="spool-button text-center">

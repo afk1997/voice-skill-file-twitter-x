@@ -49,7 +49,7 @@ export function SkillFileEditor({ brandId, skillFile, versionDiff }: { brandId: 
       <section className="space-y-4 spool-plate p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Voice Skill File</p>
+            <p className="text-xs font-semibold uppercase tracking-normal text-muted">Skill File</p>
             <h2 className="mt-1 text-xl font-semibold text-ink">{skillFile.brandName}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{skillFile.voiceSummary}</p>
           </div>
