@@ -175,7 +175,7 @@ export function FeedbackButtons({
           type="button"
           onClick={() => reviseDraft()}
           disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
-          className="spool-button disabled:opacity-40"
+          className="spool-button gap-2 disabled:opacity-40"
         >
           <RotateCcw size={16} aria-hidden="true" />
           {revisionLoading ? "Revising..." : "Revise with note"}
@@ -184,7 +184,7 @@ export function FeedbackButtons({
           type="button"
           onClick={() => submit(selectedReason, { previewOnly: true })}
           disabled={Boolean(loadingLabel) || revisionLoading || !canSaveAndRevise}
-          className="spool-button-secondary disabled:opacity-40"
+          className="spool-button-secondary gap-2 disabled:opacity-40"
         >
           <Eye size={16} aria-hidden="true" />
           {loadingLabel || revisionLoading ? "Previewing..." : "Preview Skill File patch"}
@@ -199,7 +199,7 @@ export function FeedbackButtons({
             type="button"
             onClick={() => submit(action.label)}
             disabled={Boolean(loadingLabel) || revisionLoading}
-            className="spool-button-secondary disabled:opacity-60"
+            className="spool-button-secondary gap-2 disabled:opacity-60"
           >
             {action.label === REJECT_FEEDBACK_LABEL ? null : <Check size={16} aria-hidden="true" />}
             {loadingLabel === action.label ? "Saving..." : action.label === REJECT_FEEDBACK_LABEL ? "Reject draft" : "Approve"}
@@ -225,7 +225,7 @@ export function FeedbackButtons({
               type="button"
               onClick={() => submit(selectedReason, { reviseAfter: true })}
               disabled={Boolean(loadingLabel) || revisionLoading}
-              className="spool-button disabled:opacity-60"
+              className="spool-button gap-2 disabled:opacity-60"
             >
               <Sparkles size={14} aria-hidden="true" />
               {loadingLabel || revisionLoading ? "Applying feedback..." : "Teach voice & revise"}
@@ -234,7 +234,7 @@ export function FeedbackButtons({
               type="button"
               onClick={() => submit(selectedReason)}
               disabled={Boolean(loadingLabel) || revisionLoading}
-              className="spool-button-secondary disabled:opacity-60"
+              className="spool-button-secondary gap-2 disabled:opacity-60"
             >
               <Save size={14} aria-hidden="true" />
               Apply patch only
@@ -276,7 +276,7 @@ export function FeedbackButtons({
                   type="button"
                   onClick={() => reviseDraft()}
                   disabled={revisionLoading}
-                  className="spool-button disabled:opacity-60"
+                  className="spool-button gap-2 disabled:opacity-60"
                 >
                   <RotateCcw size={14} aria-hidden="true" />
                   {revisionLoading ? "Applying fixes..." : "Revise using saved feedback"}

@@ -126,7 +126,7 @@ export function TweetStudio({
           <p className="mt-1 text-sm font-medium text-ink">{mode.label}</p>
           <p className="mt-1 text-xs leading-5 text-muted">{mode.description}</p>
           {mode.label === "Setup Required" ? (
-            <Link href="/settings" className="mt-2 inline-flex rounded-ui bg-ink px-3 py-2 text-xs font-medium text-white">
+            <Link href="/settings" className="spool-button mt-2 text-xs">
               Configure provider
             </Link>
           ) : null}
@@ -142,7 +142,7 @@ export function TweetStudio({
             {skillHealth.corpusSampleCount.toLocaleString()} corpus samples / {skillHealth.usefulSampleCount.toLocaleString()} useful samples
           </p>
           {skillHealth.isStale || !skillHealth.corpusBacked ? (
-            <Link href={`/brands/${brandId}/voice-report`} className="mt-2 inline-flex rounded-ui border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-ink">
+            <Link href={`/brands/${brandId}/voice-report`} className="spool-button-secondary mt-2 text-xs">
               Refresh Skill File
             </Link>
           ) : null}
