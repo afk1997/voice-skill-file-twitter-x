@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { parseJsonField, stringifyJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
 import { compileRulesToSkillPatch } from "@/lib/rules/compileRulesToSkillPatch";
@@ -27,6 +28,10 @@ function enumToValue(value: string) {
 
 function toEnum(value: string) {
   return value.toUpperCase();
+}
+
+function customRuleId() {
+  return `custom-${randomUUID()}`;
 }
 
 function toRuleInput(rule: RawRule): RuleBankRuleInput {
@@ -112,6 +117,7 @@ export async function createCustomRule({
 
   const rule = await prisma.ruleBankRule.create({
     data: {
+      id: customRuleId(),
       title: input.title.trim(),
       body: input.body.trim(),
       category: toEnum(input.category),
@@ -238,20 +244,31 @@ export async function applyRulePreview({ prisma, brandId, previewId }: { prisma:
     throw new Error("Preview is stale. Preview again against the latest Skill File.");
   }
 
-  const compiled = parseJsonField<{ nextSkillFile: VoiceSkillFile } | null>(preview.previewPatchJson, null);
+  const compiled = parseJsonField<{ nextSkillFile: VoiceSkillFile; items?: string[] } | null>(preview.previewPatchJson, null);
   if (!compiled?.nextSkillFile) throw new Error("Preview patch could not be parsed.");
+  if (!compiled.items?.length) {
+    throw new Error("Preview has no Skill File changes to apply.");
+  }
 
-  const skillFile = await prisma.skillFile.create({
-    data: {
-      brandId,
-      version: compiled.nextSkillFile.version,
-      skillJson: stringifyJsonField(compiled.nextSkillFile),
-    },
-  });
-  const application = await prisma.ruleApplication.update({
-    where: { id: preview.id },
-    data: { status: "APPLIED", resultSkillFileId: skillFile.id, appliedAt: new Date() },
-  });
+  const writeApplication = async (client: PrismaLike) => {
+    const skillFile = await client.skillFile.create({
+      data: {
+        brandId,
+        version: compiled.nextSkillFile.version,
+        skillJson: stringifyJsonField(compiled.nextSkillFile),
+      },
+    });
+    const application = await client.ruleApplication.update({
+      where: { id: preview.id },
+      data: { status: "APPLIED", resultSkillFileId: skillFile.id, appliedAt: new Date() },
+    });
 
-  return { skillFile, application };
+    return { skillFile, application };
+  };
+
+  if (typeof prisma.$transaction === "function") {
+    return prisma.$transaction((tx: PrismaLike) => writeApplication(tx));
+  }
+
+  return writeApplication(prisma);
 }

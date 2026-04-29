@@ -64,6 +64,22 @@ function createSkillRule(rule: RuleBankRuleInput, body: string, confidenceValue:
   };
 }
 
+function skillRuleSignature(rule: SkillRule) {
+  return JSON.stringify({
+    id: rule.id,
+    layer: rule.layer,
+    rule: rule.rule,
+    confidence: rule.confidence,
+    supportingExamples: rule.supportingExamples ?? [],
+    counterExamples: rule.counterExamples ?? [],
+    appliesTo: rule.appliesTo ?? [],
+  });
+}
+
+function skillRuleChanged(existing: SkillRule | undefined, incoming: SkillRule) {
+  return !existing || skillRuleSignature(existing) !== skillRuleSignature(incoming);
+}
+
 function mergeRules(existing: SkillRule[], incoming: SkillRule[]) {
   const byId = new Map<string, SkillRule>();
   for (const rule of existing) byId.set(rule.id, rule);
@@ -97,6 +113,8 @@ export function compileRulesToSkillPatch({ skillFile, rules, selections, nextVer
     },
   };
   const items: string[] = [];
+  const existingSkillRules = new Map((skillFile.rules ?? []).map((rule) => [rule.id, rule]));
+  const linguisticModes = new Map<string, RuleBankRuleInput["mode"]>();
 
   for (const rule of activeRules) {
     const body = ruleBody(rule, selections);
@@ -104,20 +122,19 @@ export function compileRulesToSkillPatch({ skillFile, rules, selections, nextVer
 
     if (hasTarget(rule, "skill_rules")) {
       const skillRule = createSkillRule(rule, body, confidenceValue);
-      patch.skillRules.push(skillRule);
-      items.push(rule.mode === "hard_constraint" ? `Add hard constraint: ${body}` : `Add rule: ${body}`);
+      if (skillRuleChanged(existingSkillRules.get(skillRule.id), skillRule)) {
+        patch.skillRules.push(skillRule);
+        items.push(existingSkillRules.has(skillRule.id) ? `Update rule: ${body}` : rule.mode === "hard_constraint" ? `Add hard constraint: ${body}` : `Add rule: ${body}`);
+      }
     }
 
     if (hasTarget(rule, "linguistic_rules")) {
       patch.linguisticRules.push(body);
-      if (rule.mode === "hard_constraint" && !items.includes(`Add hard constraint: ${body}`)) {
-        items.push(`Add hard constraint: ${body}`);
-      }
+      linguisticModes.set(body.trim().toLowerCase(), rule.mode);
     }
 
     if (rule.mode === "banned_phrase" || hasTarget(rule, "avoided_phrases")) {
       patch.avoidedPhrases.push(...(rule.payloadJson.phrases ?? []));
-      for (const phrase of rule.payloadJson.phrases ?? []) items.push(`Avoid phrase: ${phrase}`);
     }
 
     if (hasTarget(rule, "retrieval_preferred_topics")) {
@@ -140,6 +157,16 @@ export function compileRulesToSkillPatch({ skillFile, rules, selections, nextVer
   patch.retrievalHints.preferredStructures = additions(existingRetrievalHints.preferredStructures, patch.retrievalHints.preferredStructures);
   patch.retrievalHints.preferredVocabulary = additions(existingRetrievalHints.preferredVocabulary, patch.retrievalHints.preferredVocabulary);
   patch.retrievalHints.avoidVocabulary = additions(existingRetrievalHints.avoidVocabulary, patch.retrievalHints.avoidVocabulary);
+
+  for (const body of patch.linguisticRules) {
+    const label = linguisticModes.get(body.trim().toLowerCase()) === "hard_constraint" ? `Add hard constraint: ${body}` : `Add linguistic rule: ${body}`;
+    if (!items.includes(label)) items.push(label);
+  }
+  for (const phrase of patch.avoidedPhrases) items.push(`Avoid phrase: ${phrase}`);
+  for (const topic of patch.retrievalHints.preferredTopics) items.push(`Add preferred topic: ${topic}`);
+  for (const structure of patch.retrievalHints.preferredStructures) items.push(`Add preferred structure: ${structure}`);
+  for (const word of patch.retrievalHints.preferredVocabulary) items.push(`Add preferred vocabulary: ${word}`);
+  for (const word of patch.retrievalHints.avoidVocabulary) items.push(`Add avoided vocabulary: ${word}`);
 
   const nextSkillFile: VoiceSkillFile = {
     ...skillFile,

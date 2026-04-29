@@ -19,6 +19,25 @@ describe("ruleBankService", () => {
     ).rejects.toThrow("Banned phrase rules require at least one phrase.");
   });
 
+  it("generates ids for custom rules created at runtime", async () => {
+    const create = vi.fn(async ({ data }) => data);
+    const rule = await createCustomRule({
+      prisma: { ruleBankRule: { create } },
+      input: {
+        title: "Custom rule",
+        body: "Use one concrete observed consequence.",
+        category: "specificity",
+        mode: "guidance",
+        scope: "global",
+        targetJson: ["skill_rules"],
+        payloadJson: {},
+      },
+    });
+
+    expect(create.mock.calls[0][0].data.id).toMatch(/^custom-[0-9a-f-]{36}$/);
+    expect(rule.id).toBe(create.mock.calls[0][0].data.id);
+  });
+
   it("upserts brand selections without creating skill files", async () => {
     const upsert = vi.fn().mockResolvedValue({});
     await saveBrandRuleSelections({
@@ -89,5 +108,62 @@ describe("ruleBankService", () => {
         previewId: "preview1",
       } as never),
     ).rejects.toThrow("Preview is stale. Preview again against the latest Skill File.");
+  });
+
+  it("rejects no-op previews during apply", async () => {
+    await expect(
+      applyRulePreview({
+        prisma: {
+          ruleApplication: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: "preview1",
+              brandId: "b1",
+              baseSkillFileId: "sf1",
+              baseSkillFileVersion: "v1.0",
+              status: "PREVIEWED",
+              previewPatchJson: JSON.stringify({ items: [], nextSkillFile: { version: "v1.1" } }),
+            }),
+          },
+          skillFile: { findFirst: vi.fn().mockResolvedValue({ id: "sf1", version: "v1.0" }) },
+        },
+        brandId: "b1",
+        previewId: "preview1",
+      } as never),
+    ).rejects.toThrow("Preview has no Skill File changes to apply.");
+  });
+
+  it("applies previews inside a transaction when available", async () => {
+    const createSkillFile = vi.fn().mockResolvedValue({ id: "sf2", version: "v1.1" });
+    const updateApplication = vi.fn().mockResolvedValue({ id: "preview1", status: "APPLIED" });
+    const transaction = vi.fn(async (callback) =>
+      callback({
+        skillFile: { create: createSkillFile },
+        ruleApplication: { update: updateApplication },
+      }),
+    );
+
+    const result = await applyRulePreview({
+      prisma: {
+        $transaction: transaction,
+        ruleApplication: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: "preview1",
+            brandId: "b1",
+            baseSkillFileId: "sf1",
+            baseSkillFileVersion: "v1.0",
+            status: "PREVIEWED",
+            previewPatchJson: JSON.stringify({ items: ["Added rule"], nextSkillFile: { version: "v1.1" } }),
+          }),
+        },
+        skillFile: { findFirst: vi.fn().mockResolvedValue({ id: "sf1", version: "v1.0" }) },
+      },
+      brandId: "b1",
+      previewId: "preview1",
+    } as never);
+
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(createSkillFile).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ version: "v1.1" }) }));
+    expect(updateApplication).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "preview1" }, data: expect.objectContaining({ status: "APPLIED" }) }));
+    expect(result.skillFile.version).toBe("v1.1");
   });
 });

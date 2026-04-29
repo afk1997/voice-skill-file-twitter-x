@@ -60,6 +60,7 @@ export function BrandRulesClient({
 }) {
   const [rules, setRules] = useState(initialRules);
   const [selectedRuleIds, setSelectedRuleIds] = useState(() => initialSelections.filter((selection) => selection.selected).map((selection) => selection.ruleId));
+  const [editingRule, setEditingRule] = useState<RuleBankRuleInput | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [appliedVersion, setAppliedVersion] = useState("");
   const [error, setError] = useState("");
@@ -74,6 +75,13 @@ export function BrandRulesClient({
       })),
     [applications],
   );
+
+  function saveRule(rule: RuleBankRuleInput) {
+    setRules((current) => (current.some((item) => item.id === rule.id) ? current.map((item) => (item.id === rule.id ? rule : item)) : [rule, ...current]));
+    setEditingRule(null);
+    setPreview(null);
+    setAppliedVersion("");
+  }
 
   async function saveSelection(ruleId: string, selected: boolean) {
     const previousSelected = selectedRuleIds;
@@ -130,8 +138,8 @@ export function BrandRulesClient({
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <section className="space-y-4">
-        <RuleForm brandId={brandId} onCreated={(rule) => setRules((current) => [rule, ...current])} />
-        <RuleList rules={rules} selectedRuleIds={selectedRuleIds} onSelectionChange={saveSelection} />
+        <RuleForm brandId={brandId} onSaved={saveRule} editingRule={editingRule} onCancelEdit={() => setEditingRule(null)} />
+        <RuleList rules={rules} selectedRuleIds={selectedRuleIds} onSelectionChange={saveSelection} onEdit={setEditingRule} />
       </section>
 
       <aside className="h-fit space-y-4 spool-plate p-5">
@@ -147,7 +155,7 @@ export function BrandRulesClient({
           <button type="button" onClick={previewRules} disabled={!latestSkillFile || selectedCount === 0 || loading !== ""} className="spool-button disabled:opacity-60">
             {loading === "preview" ? "Previewing..." : "Preview"}
           </button>
-          <button type="button" onClick={applyRules} disabled={!preview || loading !== ""} className="spool-button-secondary disabled:opacity-60">
+          <button type="button" onClick={applyRules} disabled={!preview || preview.compiled.items.length === 0 || loading !== ""} className="spool-button-secondary disabled:opacity-60">
             {loading === "apply" ? "Applying..." : "Apply to Skill File"}
           </button>
         </div>

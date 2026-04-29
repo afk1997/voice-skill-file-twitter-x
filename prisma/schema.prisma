@@ -167,7 +167,7 @@ enum RuleApplicationStatus {
 }
 
 model RuleBankRule {
-  id          String       @id
+  id          String       @id @default(cuid())
   title       String
   body        String
   category    RuleCategory

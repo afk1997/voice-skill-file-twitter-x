@@ -71,6 +71,8 @@ describe("compileRulesToSkillPatch", () => {
     expect(compiled.nextSkillFile.avoidedPhrases.filter((phrase) => phrase === "game-changing")).toHaveLength(1);
     expect(compiled.nextSkillFile.retrievalHints?.avoidVocabulary).toContain("ever-evolving landscape");
     expect(compiled.patch.avoidedPhrases).toEqual(["ever-evolving landscape"]);
+    expect(compiled.items).toContain("Avoid phrase: ever-evolving landscape");
+    expect(compiled.items).not.toContain("Avoid phrase: game-changing");
   });
 
   it("updates retrieval hint targets", () => {
@@ -115,5 +117,38 @@ describe("compileRulesToSkillPatch", () => {
 
     expect(first.nextSkillFile.rules?.map((item) => item.rule)).toContain("Use one concrete anchor.");
     expect(second.nextSkillFile.rules?.filter((item) => item.id === "bank-r-guidance")).toHaveLength(1);
+    expect(second.items).toEqual([]);
+  });
+
+  it("emits update items when an existing custom rule changes", () => {
+    const first = compileRulesToSkillPatch({
+      skillFile: baseSkillFile,
+      rules: [
+        rule({
+          id: "r-guidance",
+          mode: "guidance",
+          body: "Use concrete anchors.",
+          targetJson: ["skill_rules"],
+        }),
+      ],
+      selections: [],
+      nextVersion: "v1.1",
+    });
+    const second = compileRulesToSkillPatch({
+      skillFile: first.nextSkillFile,
+      rules: [
+        rule({
+          id: "r-guidance",
+          mode: "guidance",
+          body: "Use one concrete anchor in each substantial paragraph.",
+          targetJson: ["skill_rules"],
+        }),
+      ],
+      selections: [],
+      nextVersion: "v1.2",
+    });
+
+    expect(second.items).toContain("Update rule: Use one concrete anchor in each substantial paragraph.");
+    expect(second.nextSkillFile.rules?.find((item) => item.id === "bank-r-guidance")?.rule).toBe("Use one concrete anchor in each substantial paragraph.");
   });
 });
