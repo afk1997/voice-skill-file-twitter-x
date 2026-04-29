@@ -1,30 +1,20 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { SpoolWordmark } from "@/components/ui/SpoolWordmark";
+import { listBrandWorkspaces } from "@/lib/brands/listBrandWorkspaces";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const brands = await prisma.brand.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: {
-      _count: { select: { contentSamples: true, skillFiles: true } },
-      skillFiles: { orderBy: { createdAt: "desc" }, take: 1 },
-    },
-  });
+  const { brands, loadError } = await listBrandWorkspaces();
 
   return (
     <div className="space-y-8">
-      <section className="spool-rule pb-8 pt-6">
-        <p className="spool-stamp">Posts / threads / launches</p>
-        <h1 className="mt-7 max-w-4xl font-display text-6xl font-semibold leading-[0.88] tracking-normal text-ink md:text-8xl">
-          <SpoolWordmark />
-        </h1>
-        <p className="mt-6 max-w-2xl font-display text-2xl italic leading-tight text-ink md:text-3xl">
+      <section className="pb-2 pt-6">
+        <p className="spool-stamp">Content / voice / agents</p>
+        <h1 className="mt-7 max-w-4xl font-display text-5xl font-semibold leading-[0.92] tracking-normal text-ink md:text-7xl">
           Build a reusable voice engine from real writing.
-        </p>
+        </h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
-          Upload past social writing, turn it into a Skill File, and draft posts that stay close to the voice.
+          Turn real writing into a Skill File your agents can use to draft posts, threads, and replies in the right voice.
         </p>
         <Link href="/brands/new" className="spool-button mt-6">
           Create Brand Voice Workspace
@@ -32,7 +22,9 @@ export default async function HomePage() {
       </section>
       <section>
         <h2 className="text-xl font-semibold text-ink">Brand workspaces</h2>
-        {brands.length === 0 ? (
+        {loadError ? (
+          <p className="mt-2 max-w-xl text-sm text-muted">{loadError}</p>
+        ) : brands.length === 0 ? (
           <p className="mt-2 text-sm text-muted">No workspaces yet. Create one to start building a Skill File.</p>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">

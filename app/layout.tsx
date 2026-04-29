@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Spool",
-  description: "Build a reusable voice engine for posts, threads, and launches.",
+  description: "Turn real writing into Skill Files for agent-ready drafts.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
