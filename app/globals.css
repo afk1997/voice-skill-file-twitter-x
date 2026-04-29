@@ -12,6 +12,7 @@
   --muted: rgba(26, 53, 64, 0.68);
   --panel: #fef7e3;
   --accent: #ff5728;
+  --accent-text: #8f2a17;
   --orange: #ff5728;
   --good: #1f7a3f;
   --forest: #1f7a3f;
@@ -85,7 +86,7 @@ button {
     width: fit-content;
     border: 1.5px solid var(--orange);
     background: rgba(255, 87, 40, 0.07);
-    color: var(--orange);
+    color: var(--accent-text);
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 10px;
     font-weight: 600;
@@ -117,7 +118,7 @@ button {
   }
 
   .spool-button:focus-visible {
-    outline: 2px dashed rgba(255, 87, 40, 0.55);
+    outline: 2px dashed var(--ink);
     outline-offset: 3px;
   }
 
@@ -129,6 +130,10 @@ button {
   .spool-button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+
+  .spool-button:disabled:hover {
+    box-shadow: 3px 3px 0 var(--ink);
   }
 
   .spool-button-secondary {
@@ -146,7 +151,7 @@ button {
   }
 
   .spool-button-secondary:focus-visible {
-    outline: 2px dashed rgba(255, 87, 40, 0.55);
+    outline: 2px dashed var(--ink);
     outline-offset: 3px;
   }
 
@@ -160,15 +165,19 @@ button {
     opacity: 0.5;
   }
 
+  .spool-button-secondary:disabled:hover {
+    background: var(--light);
+  }
+
   .spool-field {
     border: 1.5px solid var(--ink);
     background: var(--light);
     color: var(--ink);
   }
 
-  .spool-field:focus {
+  .spool-field:focus-visible {
     border-color: var(--orange);
-    outline: 2px dashed rgba(255, 87, 40, 0.45);
+    outline: 2px dashed var(--ink);
     outline-offset: 2px;
   }
 

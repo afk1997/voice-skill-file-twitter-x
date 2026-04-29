@@ -13,6 +13,7 @@ const config: Config = {
         surface: "#fff9ea",
         line: "rgba(26, 53, 64, 0.2)",
         accent: "#ff5728",
+        accentText: "#8f2a17",
         good: "#1f7a3f",
         warn: "#b45309",
         weak: "#b91c1c",
