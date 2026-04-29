@@ -71,6 +71,15 @@ describe("providerMode", () => {
     });
   });
 
+  it("prioritizes Codex Local over server provider fallback", () => {
+    expect(providerModeForConfig({ provider: "codex-local" }, { serverProvider: "openai" })).toEqual({
+      label: "Codex Local",
+      description: "Uses your local Codex ChatGPT sign-in. Requires this app to run on your machine.",
+      isQualityMode: false,
+      isLocalDraftMode: true,
+    });
+  });
+
   it("sizes internal candidate pools above the requested count", () => {
     expect(candidatePoolSize(1)).toBe(8);
     expect(candidatePoolSize(3)).toBe(8);

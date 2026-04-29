@@ -29,6 +29,15 @@ export function providerModeForConfig(config: LlmProviderConfig, options: Provid
   const hasLocalEndpoint = Boolean(config.provider === "openai-compatible" && config.baseUrl);
   const usesServerProvider = Boolean(options.serverProvider && !hasBrowserKey && !hasLocalEndpoint);
 
+  if (config.provider === "codex-local") {
+    return {
+      label: "Codex Local",
+      description: "Uses your local Codex ChatGPT sign-in. Requires this app to run on your machine.",
+      isQualityMode: false,
+      isLocalDraftMode: true,
+    };
+  }
+
   if (usesServerProvider) {
     if (options.serverProvider === "anthropic") {
       return {
@@ -53,15 +62,6 @@ export function providerModeForConfig(config: LlmProviderConfig, options: Provid
       description: "Server environment provider is configured. Quality depends on the selected model.",
       isQualityMode: false,
       isLocalDraftMode: false,
-    };
-  }
-
-  if (config.provider === "codex-local") {
-    return {
-      label: "Codex Local",
-      description: "Uses your local Codex ChatGPT sign-in. Requires this app to run on your machine.",
-      isQualityMode: false,
-      isLocalDraftMode: true,
     };
   }
 
