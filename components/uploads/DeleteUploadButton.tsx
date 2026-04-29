@@ -33,7 +33,7 @@ export function DeleteUploadButton({ brandId, uploadId, fileName }: { brandId: s
         type="button"
         onClick={onDelete}
         disabled={loading}
-        className="rounded-ui border border-line px-3 py-1.5 text-xs font-medium text-weak hover:border-weak disabled:opacity-60"
+        className="spool-button-secondary min-h-8 px-3 py-1.5 text-xs text-weak hover:border-weak disabled:opacity-60"
       >
         {loading ? "Deleting..." : "Delete"}
       </button>
