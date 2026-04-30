@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ClaimLegacyBrandsPanel } from "@/components/profile/ClaimLegacyBrandsPanel";
+import { findUnownedBrands } from "@/lib/auth/brandAccess";
 import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { listBrandWorkspaces } from "@/lib/brands/listBrandWorkspaces";
 
@@ -6,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const profile = await ensureCurrentUserProfile();
-  const { brands, loadError } = await listBrandWorkspaces(profile.id);
+  const [{ brands, loadError }, unownedBrands] = await Promise.all([listBrandWorkspaces(profile.id), findUnownedBrands()]);
 
   return (
     <div className="space-y-8">
@@ -22,6 +24,7 @@ export default async function HomePage() {
           Create Brand Voice Workspace
         </Link>
       </section>
+      {unownedBrands.length ? <ClaimLegacyBrandsPanel brands={unownedBrands} /> : null}
       <section>
         <h2 className="text-xl font-semibold text-ink">Brand workspaces</h2>
         {loadError ? (
