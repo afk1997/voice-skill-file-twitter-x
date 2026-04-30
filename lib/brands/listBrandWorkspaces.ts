@@ -1,26 +1,30 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
-export const brandWorkspaceQuery = {
-  orderBy: { updatedAt: "desc" },
-  include: {
-    _count: { select: { contentSamples: true, skillFiles: true } },
-    skillFiles: { orderBy: { createdAt: "desc" }, take: 1 },
-  },
-} satisfies Prisma.BrandFindManyArgs;
-
-export type BrandWorkspace = Prisma.BrandGetPayload<typeof brandWorkspaceQuery>;
-
-type LoadBrandWorkspaces = () => Promise<BrandWorkspace[]>;
-
-function loadBrandWorkspaces() {
-  return prisma.brand.findMany(brandWorkspaceQuery);
+export function scopedBrandWorkspaceQuery(profileId: string) {
+  return {
+    where: { memberships: { some: { userProfileId: profileId } } },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      _count: { select: { contentSamples: true, skillFiles: true } },
+      skillFiles: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  } satisfies Prisma.BrandFindManyArgs;
 }
 
-export async function listBrandWorkspaces(load: LoadBrandWorkspaces = loadBrandWorkspaces) {
+export const brandWorkspaceQuery = scopedBrandWorkspaceQuery;
+export type BrandWorkspace = Prisma.BrandGetPayload<ReturnType<typeof scopedBrandWorkspaceQuery>>;
+
+type LoadBrandWorkspaces = (query: ReturnType<typeof scopedBrandWorkspaceQuery>) => Promise<BrandWorkspace[]>;
+
+function loadBrandWorkspaces(query: ReturnType<typeof scopedBrandWorkspaceQuery>) {
+  return prisma.brand.findMany(query);
+}
+
+export async function listBrandWorkspaces(profileId: string, load: LoadBrandWorkspaces = loadBrandWorkspaces) {
   try {
     return {
-      brands: await load(),
+      brands: await load(scopedBrandWorkspaceQuery(profileId)),
       loadError: null,
     };
   } catch (error) {

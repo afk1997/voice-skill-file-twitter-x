@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { brandWorkspaceQuery, listBrandWorkspaces } from "@/lib/brands/listBrandWorkspaces";
+import { listBrandWorkspaces, scopedBrandWorkspaceQuery } from "@/lib/brands/listBrandWorkspaces";
 
 describe("listBrandWorkspaces", () => {
-  it("returns brand workspaces from the database", async () => {
+  it("loads only brands owned by the current profile", async () => {
     const brand = {
       id: "brand_1",
       name: "Metrom",
@@ -11,13 +11,19 @@ describe("listBrandWorkspaces", () => {
       _count: { contentSamples: 12, skillFiles: 2 },
       skillFiles: [{ version: "v1.2" }],
     };
-    const load = vi.fn().mockResolvedValue([brand]);
+    const findMany = vi.fn().mockResolvedValue([brand]);
 
-    const result = await listBrandWorkspaces(load);
+    const result = await listBrandWorkspaces("profile1", (query) => findMany(query));
 
     expect(result).toEqual({ brands: [brand], loadError: null });
-    expect(load).toHaveBeenCalledOnce();
-    expect(brandWorkspaceQuery).toEqual({
+    expect(findMany).toHaveBeenCalledWith(scopedBrandWorkspaceQuery("profile1"));
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      memberships: { some: { userProfileId: "profile1" } },
+    });
+    expect(scopedBrandWorkspaceQuery("profile1")).toEqual({
+      where: {
+        memberships: { some: { userProfileId: "profile1" } },
+      },
       orderBy: { updatedAt: "desc" },
       include: {
         _count: { select: { contentSamples: true, skillFiles: true } },
@@ -30,7 +36,7 @@ describe("listBrandWorkspaces", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const load = vi.fn().mockRejectedValue(new Error("database unavailable"));
 
-    const result = await listBrandWorkspaces(load);
+    const result = await listBrandWorkspaces("profile1", load);
 
     expect(result).toEqual({
       brands: [],
