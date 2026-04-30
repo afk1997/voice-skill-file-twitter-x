@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import React from "react";
 import { SpoolWordmark } from "@/components/ui/SpoolWordmark";
@@ -11,7 +11,7 @@ export function AppHeader() {
           <SpoolWordmark className="text-3xl" />
         </Link>
         <nav className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-normal text-ink md:gap-3">
-          <SignedIn>
+          <Show when="signed-in">
             <Link href="/settings" className="hover:text-accentText">
               Provider Settings
             </Link>
@@ -21,9 +21,9 @@ export function AppHeader() {
             <Link href="/brands/new" className="spool-button min-h-9 px-3 py-2 font-sans text-xs normal-case tracking-normal">
               New brand
             </Link>
-            <UserButton afterSignOutUrl="/sign-in" />
-          </SignedIn>
-          <SignedOut>
+            <UserButton />
+          </Show>
+          <Show when="signed-out">
             <SignInButton mode="modal">
               <button type="button" className="spool-button-secondary min-h-9 px-3 py-2 font-sans text-xs normal-case tracking-normal">
                 Sign in
@@ -34,7 +34,7 @@ export function AppHeader() {
                 Sign up
               </button>
             </SignUpButton>
-          </SignedOut>
+          </Show>
         </nav>
       </div>
     </header>

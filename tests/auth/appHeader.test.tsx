@@ -5,8 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppHeader } from "@/components/auth/AppHeader";
 
 vi.mock("@clerk/nextjs", () => ({
-  SignedIn: ({ children }: { children: React.ReactNode }) => <div data-testid="signed-in">{children}</div>,
-  SignedOut: ({ children }: { children: React.ReactNode }) => <div data-testid="signed-out">{children}</div>,
+  Show: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SignUpButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   UserButton: () => <button aria-label="User menu">User</button>,
