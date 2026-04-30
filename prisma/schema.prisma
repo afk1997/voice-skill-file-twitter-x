@@ -29,6 +29,7 @@ model Brand {
   ruleBankRules  RuleBankRule[]
   ruleSelections BrandRuleSelection[]
   ruleApplications RuleApplication[]
+  memberships BrandMembership[]
 }
 
 model Upload {
@@ -121,6 +122,42 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 }
 
+enum BrandMembershipRole {
+  OWNER @map("owner")
+}
+
+model UserProfile {
+  id             String   @id @default(cuid())
+  clerkUserId    String   @unique
+  email          String?
+  displayName    String?
+  imageUrl       String?
+  bio            String?
+  defaultBrandId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships BrandMembership[]
+  ruleBankRules RuleBankRule[]
+
+  @@index([email])
+}
+
+model BrandMembership {
+  id            String              @id @default(cuid())
+  brandId       String
+  brand         Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  userProfileId String
+  userProfile   UserProfile         @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  role          BrandMembershipRole @default(OWNER)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([brandId, userProfileId])
+  @@index([userProfileId, role])
+  @@index([brandId, role])
+}
+
 enum RuleSource {
   STARTER @map("starter")
   CUSTOM  @map("custom")
@@ -176,6 +213,8 @@ model RuleBankRule {
   scope       RuleScope
   brandId     String?
   brand       Brand?       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  userProfileId String?
+  userProfile   UserProfile? @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
   targetJson  String
   payloadJson String
   enabled     Boolean      @default(true)
@@ -186,6 +225,7 @@ model RuleBankRule {
 
   @@index([source, scope, enabled])
   @@index([brandId])
+  @@index([userProfileId, scope, source])
 }
 
 model BrandRuleSelection {
