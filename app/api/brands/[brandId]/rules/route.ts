@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ bra
     const { brandId } = await params;
     const profile = await ensureCurrentUserProfile();
     await assertBrandAccess({ profileId: profile.id, brandId });
-    return jsonOk(await listApplicableBrandRules({ prisma, brandId }));
+    return jsonOk(await listApplicableBrandRules({ prisma, brandId, profileId: profile.id }));
   } catch (error) {
     if (error instanceof Error) return jsonError(error.message, authErrorStatus(error));
     return jsonErrorFromUnknown(error, "Could not load brand rules.", 500);
@@ -26,6 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ bra
     const rule = await createCustomRule({
       prisma,
       brandId,
+      profileId: profile.id,
       input: {
         title: body.title,
         body: body.body,

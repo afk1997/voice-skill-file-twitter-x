@@ -15,6 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ br
       prisma,
       brandId,
       ruleId,
+      profileId: profile.id,
       input: {
         title: body.title,
         body: body.body,

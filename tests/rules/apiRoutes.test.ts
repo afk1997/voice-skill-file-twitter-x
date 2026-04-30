@@ -10,13 +10,25 @@ const service = vi.hoisted(() => ({
   applyRulePreview: vi.fn(),
 }));
 
+const authBridge = vi.hoisted(() => ({
+  ensureCurrentUserProfile: vi.fn(),
+}));
+
+const accessBridge = vi.hoisted(() => ({
+  assertBrandAccess: vi.fn(),
+}));
+
 vi.mock("@/lib/rules/ruleBankService", () => service);
+vi.mock("@/lib/auth/currentUserProfile", () => authBridge);
+vi.mock("@/lib/auth/brandAccess", () => accessBridge);
 vi.mock("@/lib/db", () => ({ prisma: {} }));
 
 describe("rules API routes", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    authBridge.ensureCurrentUserProfile.mockResolvedValue({ id: "profile1" });
+    accessBridge.assertBrandAccess.mockResolvedValue(undefined);
   });
 
   it("lists global rules", async () => {
@@ -24,6 +36,7 @@ describe("rules API routes", () => {
     const { GET } = await import("@/app/api/rules/route");
     const response = await GET();
     expect(response.status).toBe(200);
+    expect(service.listGlobalRules).toHaveBeenCalledWith({ prisma: {}, profileId: "profile1" });
     await expect(response.json()).resolves.toEqual({ rules: [{ id: "r1" }] });
   });
 
@@ -32,6 +45,7 @@ describe("rules API routes", () => {
     const { POST } = await import("@/app/api/rules/route");
     const response = await POST(new Request("http://localhost/api/rules", { method: "POST", body: JSON.stringify({ title: "Rule", body: "Body" }) }));
     expect(response.status).toBe(200);
+    expect(service.createCustomRule).toHaveBeenCalledWith(expect.objectContaining({ profileId: "profile1" }));
     await expect(response.json()).resolves.toEqual({ rule: { id: "r2" } });
   });
 
@@ -59,6 +73,7 @@ describe("rules API routes", () => {
     const { POST } = await import("@/app/api/brands/[brandId]/rules/preview/route");
     const response = await POST(new Request("http://localhost/api/brands/b1/rules/preview", { method: "POST", body: "{}" }), { params: Promise.resolve({ brandId: "b1" }) });
     expect(response.status).toBe(200);
+    expect(service.previewSelectedRules).toHaveBeenCalledWith({ prisma: {}, brandId: "b1", profileId: "profile1" });
     await expect(response.json()).resolves.toEqual({ preview: { id: "p1" }, compiled: { items: ["Add rule"] } });
   });
 

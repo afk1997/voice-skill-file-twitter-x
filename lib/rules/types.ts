@@ -52,6 +52,7 @@ export type RuleBankRuleInput = {
   source: RuleSourceValue;
   scope: RuleScopeValue;
   brandId?: string | null;
+  userProfileId?: string | null;
   targetJson: RuleTargetValue[];
   payloadJson: RulePayload;
   enabled: boolean;

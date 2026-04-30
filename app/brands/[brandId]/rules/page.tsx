@@ -21,7 +21,7 @@ export default async function BrandRulesPage({ params }: { params: Promise<{ bra
   }
   const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { id: true, name: true } });
   if (!brand) notFound();
-  const data = await listApplicableBrandRules({ prisma, brandId });
+  const data = await listApplicableBrandRules({ prisma, brandId, profileId: profile.id });
 
   return (
     <div className="space-y-8">

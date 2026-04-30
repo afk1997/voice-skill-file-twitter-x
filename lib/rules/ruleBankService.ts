@@ -17,6 +17,7 @@ type RawRule = {
   source: string;
   scope: string;
   brandId?: string | null;
+  userProfileId?: string | null;
   targetJson: string;
   payloadJson: string;
   enabled: boolean;
@@ -44,6 +45,7 @@ function toRuleInput(rule: RawRule): RuleBankRuleInput {
     source: enumToValue(rule.source) as "starter" | "custom",
     scope: enumToValue(rule.scope) as RuleScopeValue,
     brandId: rule.brandId,
+    userProfileId: rule.userProfileId,
     targetJson: parseRuleTargets(rule.targetJson),
     payloadJson: parseRulePayload(rule.payloadJson),
     enabled: rule.enabled,
@@ -72,10 +74,24 @@ function validateRuleInput(input: {
   }
 }
 
-export async function listApplicableBrandRules({ prisma, brandId }: { prisma: PrismaLike; brandId: string }) {
+function globalRulesWhere(profileId: string) {
+  return {
+    scope: "GLOBAL",
+    OR: [{ source: "STARTER" }, { source: "CUSTOM", userProfileId: profileId }],
+  };
+}
+
+function applicableBrandRulesWhere(brandId: string, profileId: string) {
+  return {
+    enabled: true,
+    OR: [{ scope: "GLOBAL", source: "STARTER" }, { scope: "GLOBAL", source: "CUSTOM", userProfileId: profileId }, { brandId }],
+  };
+}
+
+export async function listApplicableBrandRules({ prisma, brandId, profileId }: { prisma: PrismaLike; brandId: string; profileId: string }) {
   const [rules, selections, applications, latestSkillFile] = await Promise.all([
     prisma.ruleBankRule.findMany({
-      where: { enabled: true, OR: [{ scope: "GLOBAL" }, { brandId }] },
+      where: applicableBrandRulesWhere(brandId, profileId),
       orderBy: [{ source: "asc" }, { category: "asc" }, { title: "asc" }],
     }),
     prisma.brandRuleSelection.findMany({ where: { brandId } }),
@@ -86,9 +102,9 @@ export async function listApplicableBrandRules({ prisma, brandId }: { prisma: Pr
   return { rules: rules.map(toRuleInput), selections, applications, latestSkillFile };
 }
 
-export async function listGlobalRules({ prisma }: { prisma: PrismaLike }) {
+export async function listGlobalRules({ prisma, profileId }: { prisma: PrismaLike; profileId: string }) {
   const rules = await prisma.ruleBankRule.findMany({
-    where: { scope: "GLOBAL" },
+    where: globalRulesWhere(profileId),
     orderBy: [{ source: "asc" }, { category: "asc" }, { title: "asc" }],
   });
   return rules.map(toRuleInput);
@@ -97,10 +113,12 @@ export async function listGlobalRules({ prisma }: { prisma: PrismaLike }) {
 export async function createCustomRule({
   prisma,
   brandId,
+  profileId,
   input,
 }: {
   prisma: PrismaLike;
   brandId?: string;
+  profileId?: string;
   input: {
     title: string;
     body: string;
@@ -114,6 +132,7 @@ export async function createCustomRule({
   const scope = brandId ? "brand" : input.scope;
   if (scope === "brand" && !brandId) throw new Error("Brand-scoped rules require a brand.");
   validateRuleInput({ ...input, scope });
+  if (scope === "global" && !profileId) throw new Error("User profile is required for global custom rules.");
 
   const rule = await prisma.ruleBankRule.create({
     data: {
@@ -125,6 +144,7 @@ export async function createCustomRule({
       source: "CUSTOM",
       scope: toEnum(scope),
       brandId: brandId ?? null,
+      userProfileId: scope === "global" ? profileId : null,
       targetJson: stringifyJsonField(input.targetJson),
       payloadJson: stringifyJsonField(input.payloadJson),
       enabled: true,
@@ -138,11 +158,13 @@ export async function updateCustomRule({
   prisma,
   ruleId,
   brandId,
+  profileId,
   input,
 }: {
   prisma: PrismaLike;
   ruleId: string;
   brandId?: string;
+  profileId?: string;
   input: Parameters<typeof createCustomRule>[0]["input"];
 }) {
   validateRuleInput(input);
@@ -150,6 +172,7 @@ export async function updateCustomRule({
   if (!existing || enumToValue(existing.source) !== "custom") throw new Error("Only custom rules can be edited.");
   if (brandId && existing.brandId !== brandId) throw new Error("Rule does not belong to this brand.");
   if (!brandId && enumToValue(existing.scope) !== "global") throw new Error("Only global custom rules can be edited here.");
+  if (!brandId && (!profileId || existing.userProfileId !== profileId)) throw new Error("Only your custom rules can be edited here.");
 
   const rule = await prisma.ruleBankRule.update({
     where: { id: ruleId },
@@ -191,11 +214,11 @@ export async function saveBrandRuleSelections({
   return { ok: true };
 }
 
-async function selectedRulesForBrand(prisma: PrismaLike, brandId: string) {
+async function selectedRulesForBrand(prisma: PrismaLike, brandId: string, profileId: string) {
   const selections = await prisma.brandRuleSelection.findMany({ where: { brandId, selected: true } });
   const selectedIds = selections.map((selection: { ruleId: string }) => selection.ruleId);
   const rules = selectedIds.length
-    ? await prisma.ruleBankRule.findMany({ where: { id: { in: selectedIds }, enabled: true, OR: [{ scope: "GLOBAL" }, { brandId }] } })
+    ? await prisma.ruleBankRule.findMany({ where: { id: { in: selectedIds }, ...applicableBrandRulesWhere(brandId, profileId) } })
     : [];
   const normalizedSelections: BrandRuleSelectionInput[] = selections.map((selection: { ruleId: string; selected: boolean; overrideJson?: string | null }) => ({
     brandId,
@@ -207,13 +230,13 @@ async function selectedRulesForBrand(prisma: PrismaLike, brandId: string) {
   return { rules: rules.map(toRuleInput), selections: normalizedSelections };
 }
 
-export async function previewSelectedRules({ prisma, brandId, nextVersion }: { prisma: PrismaLike; brandId: string; nextVersion?: string }) {
+export async function previewSelectedRules({ prisma, brandId, profileId, nextVersion }: { prisma: PrismaLike; brandId: string; profileId: string; nextVersion?: string }) {
   const latest = await prisma.skillFile.findFirst({ where: { brandId }, orderBy: { createdAt: "desc" } });
   if (!latest) throw new Error("Create a Skill File before previewing rules.");
   const skillFile = parseJsonField<VoiceSkillFile | null>(latest.skillJson, null);
   if (!skillFile) throw new Error("Latest Skill File could not be parsed.");
 
-  const selected = await selectedRulesForBrand(prisma, brandId);
+  const selected = await selectedRulesForBrand(prisma, brandId, profileId);
   const compiled = compileRulesToSkillPatch({
     skillFile,
     rules: selected.rules,

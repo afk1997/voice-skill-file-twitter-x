@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { applyRulePreview, createCustomRule, previewSelectedRules, saveBrandRuleSelections } from "@/lib/rules/ruleBankService";
+import { applyRulePreview, createCustomRule, listGlobalRules, previewSelectedRules, saveBrandRuleSelections } from "@/lib/rules/ruleBankService";
 
 describe("ruleBankService", () => {
   it("validates banned phrase custom rules", async () => {
@@ -23,6 +23,7 @@ describe("ruleBankService", () => {
     const create = vi.fn(async ({ data }) => data);
     const rule = await createCustomRule({
       prisma: { ruleBankRule: { create } },
+      profileId: "profile1",
       input: {
         title: "Custom rule",
         body: "Use one concrete observed consequence.",
@@ -35,7 +36,42 @@ describe("ruleBankService", () => {
     });
 
     expect(create.mock.calls[0][0].data.id).toMatch(/^custom-[0-9a-f-]{36}$/);
+    expect(create.mock.calls[0][0].data.userProfileId).toBe("profile1");
     expect(rule.id).toBe(create.mock.calls[0][0].data.id);
+  });
+
+  it("lists starter rules plus global custom rules owned by the profile", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    await listGlobalRules({ prisma: { ruleBankRule: { findMany } }, profileId: "profile1" } as never);
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          scope: "GLOBAL",
+          OR: [{ source: "STARTER" }, { source: "CUSTOM", userProfileId: "profile1" }],
+        },
+      }),
+    );
+  });
+
+  it("stores profile ownership on custom global rules", async () => {
+    const create = vi.fn(async ({ data }) => ({ ...data, brandId: null, enabled: true }));
+    const rule = await createCustomRule({
+      prisma: { ruleBankRule: { create } },
+      profileId: "profile1",
+      input: {
+        title: "Custom",
+        body: "Use concrete anchors.",
+        category: "specificity",
+        mode: "guidance",
+        scope: "global",
+        targetJson: ["skill_rules"],
+        payloadJson: {},
+      },
+    } as never);
+
+    expect(create.mock.calls[0][0].data.userProfileId).toBe("profile1");
+    expect(rule.source).toBe("custom");
   });
 
   it("upserts brand selections without creating skill files", async () => {
@@ -91,6 +127,7 @@ describe("ruleBankService", () => {
         ruleApplication: { create },
       },
       brandId: "b1",
+      profileId: "profile1",
       nextVersion: "v1.1",
     });
     expect(result.preview.id).toBe("preview1");

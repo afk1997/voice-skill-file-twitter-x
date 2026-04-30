@@ -10,7 +10,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ br
     const { brandId } = await params;
     const profile = await ensureCurrentUserProfile();
     await assertBrandAccess({ profileId: profile.id, brandId });
-    return jsonOk(await previewSelectedRules({ prisma, brandId }));
+    return jsonOk(await previewSelectedRules({ prisma, brandId, profileId: profile.id }));
   } catch (error) {
     if (error instanceof Error) return jsonError(error.message, authErrorStatus(error) === 500 ? 400 : authErrorStatus(error));
     return jsonErrorFromUnknown(error, "Could not preview rules.", 500);
