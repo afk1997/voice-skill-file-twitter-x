@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { listBrandWorkspaces } from "@/lib/brands/listBrandWorkspaces";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { brands, loadError } = await listBrandWorkspaces();
+  const profile = await ensureCurrentUserProfile();
+  const { brands, loadError } = await listBrandWorkspaces(profile.id);
 
   return (
     <div className="space-y-8">
