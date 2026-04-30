@@ -1,3 +1,6 @@
+import { assertBrandAccess } from "@/lib/auth/brandAccess";
+import { authErrorStatus } from "@/lib/auth/errors";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonErrorFromUnknown, jsonOk } from "@/lib/request";
 
@@ -5,6 +8,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const { brandId, uploadId } = await params;
 
   try {
+    const profile = await ensureCurrentUserProfile();
+    await assertBrandAccess({ profileId: profile.id, brandId });
     const upload = await prisma.upload.findFirst({
       where: { id: uploadId, brandId },
       select: { id: true },
@@ -19,6 +24,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     return jsonOk({ deleted: true, deletedSamples: deletedSamples.count });
   } catch (error) {
+    if (error instanceof Error && authErrorStatus(error) !== 500) return jsonError(error.message, authErrorStatus(error));
     return jsonErrorFromUnknown(error, "Could not delete upload.", 500);
   }
 }

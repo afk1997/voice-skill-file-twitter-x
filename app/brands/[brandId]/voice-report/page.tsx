@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AnalyzeVoicePanel } from "@/components/voice-report/AnalyzeVoicePanel";
+import { assertBrandAccess } from "@/lib/auth/brandAccess";
+import { BrandAccessError } from "@/lib/auth/errors";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { parseJsonField } from "@/lib/request";
 import type { VoiceReport } from "@/lib/types";
@@ -10,6 +13,13 @@ export const dynamic = "force-dynamic";
 
 export default async function VoiceReportPage({ params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
+  const profile = await ensureCurrentUserProfile();
+  try {
+    await assertBrandAccess({ profileId: profile.id, brandId });
+  } catch (error) {
+    if (error instanceof BrandAccessError) notFound();
+    throw error;
+  }
   const brand = await prisma.brand.findUnique({
     where: { id: brandId },
     include: { voiceReports: { orderBy: { createdAt: "desc" }, take: 1 } },

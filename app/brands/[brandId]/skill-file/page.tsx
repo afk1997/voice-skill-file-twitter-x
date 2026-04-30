@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SkillFileEditor } from "@/components/skill-file/SkillFileEditor";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { assertBrandAccess } from "@/lib/auth/brandAccess";
+import { BrandAccessError } from "@/lib/auth/errors";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { parseJsonField } from "@/lib/request";
 import type { VoiceSkillFile } from "@/lib/types";
@@ -12,6 +15,13 @@ export const dynamic = "force-dynamic";
 
 export default async function SkillFilePage({ params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
+  const profile = await ensureCurrentUserProfile();
+  try {
+    await assertBrandAccess({ profileId: profile.id, brandId });
+  } catch (error) {
+    if (error instanceof BrandAccessError) notFound();
+    throw error;
+  }
   const brand = await prisma.brand.findUnique({
     where: { id: brandId },
     include: {

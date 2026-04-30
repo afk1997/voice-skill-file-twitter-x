@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { DeleteUploadButton } from "@/components/uploads/DeleteUploadButton";
 import { UploadForm } from "@/components/uploads/UploadForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { assertBrandAccess } from "@/lib/auth/brandAccess";
+import { BrandAccessError } from "@/lib/auth/errors";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { parseJsonField } from "@/lib/request";
 
@@ -10,6 +13,13 @@ export const dynamic = "force-dynamic";
 
 export default async function UploadPage({ params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
+  const profile = await ensureCurrentUserProfile();
+  try {
+    await assertBrandAccess({ profileId: profile.id, brandId });
+  } catch (error) {
+    if (error instanceof BrandAccessError) notFound();
+    throw error;
+  }
   const brand = await prisma.brand.findUnique({
     where: { id: brandId },
     include: { uploads: { orderBy: { createdAt: "desc" }, take: 10 } },

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BrandRulesClient } from "@/components/rules/BrandRulesClient";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { assertBrandAccess } from "@/lib/auth/brandAccess";
+import { BrandAccessError } from "@/lib/auth/errors";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { listApplicableBrandRules } from "@/lib/rules/ruleBankService";
 
@@ -9,6 +12,13 @@ export const dynamic = "force-dynamic";
 
 export default async function BrandRulesPage({ params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
+  const profile = await ensureCurrentUserProfile();
+  try {
+    await assertBrandAccess({ profileId: profile.id, brandId });
+  } catch (error) {
+    if (error instanceof BrandAccessError) notFound();
+    throw error;
+  }
   const brand = await prisma.brand.findUnique({ where: { id: brandId }, select: { id: true, name: true } });
   if (!brand) notFound();
   const data = await listApplicableBrandRules({ prisma, brandId });

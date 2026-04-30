@@ -1,3 +1,6 @@
+import { assertBrandAccess } from "@/lib/auth/brandAccess";
+import { authErrorStatus } from "@/lib/auth/errors";
+import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk, stringifyJsonField } from "@/lib/request";
 import { classifyTweets } from "@/lib/tweets/classifyTweet";
@@ -5,8 +8,15 @@ import { parseTweetFile } from "@/lib/tweets/parseTwitterArchive";
 
 export async function POST(request: Request, { params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
-  const brand = await prisma.brand.findUnique({ where: { id: brandId } });
-  if (!brand) return jsonError("Brand not found.", 404);
+  try {
+    const profile = await ensureCurrentUserProfile();
+    await assertBrandAccess({ profileId: profile.id, brandId });
+    const brand = await prisma.brand.findUnique({ where: { id: brandId } });
+    if (!brand) return jsonError("Brand not found.", 404);
+  } catch (error) {
+    if (error instanceof Error) return jsonError(error.message, authErrorStatus(error));
+    return jsonError("Could not verify brand access.", 500);
+  }
 
   const form = await request.formData();
   const file = form.get("file");
