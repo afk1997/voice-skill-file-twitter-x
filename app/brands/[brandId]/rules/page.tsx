@@ -4,7 +4,7 @@ import { BrandRulesClient } from "@/components/rules/BrandRulesClient";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { assertBrandAccess } from "@/lib/auth/brandAccess";
 import { BrandAccessError } from "@/lib/auth/errors";
-import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
+import { ensureCurrentUserProfileForPage } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { listApplicableBrandRules } from "@/lib/rules/ruleBankService";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BrandRulesPage({ params }: { params: Promise<{ brandId: string }> }) {
   const { brandId } = await params;
-  const profile = await ensureCurrentUserProfile();
+  const profile = await ensureCurrentUserProfileForPage();
   try {
     await assertBrandAccess({ profileId: profile.id, brandId });
   } catch (error) {

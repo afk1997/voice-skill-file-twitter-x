@@ -1,11 +1,11 @@
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ensureCurrentUserProfile, serializeProfile } from "@/lib/auth/currentUserProfile";
+import { ensureCurrentUserProfileForPage, serializeProfile } from "@/lib/auth/currentUserProfile";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const profile = serializeProfile(await ensureCurrentUserProfile());
+  const profile = serializeProfile(await ensureCurrentUserProfileForPage());
 
   return (
     <div className="max-w-3xl space-y-6">

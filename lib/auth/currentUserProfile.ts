@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import type { UserProfile } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { AuthRequiredError } from "@/lib/auth/errors";
 import { prisma } from "@/lib/db";
 
@@ -25,6 +26,20 @@ function profileFieldsFromUser(userId: string, user: ClerkUserLike | null) {
   };
 }
 
+function upsertProfileForUser(client: PrismaLike, userId: string, user: ClerkUserLike | null) {
+  const fields = profileFieldsFromUser(userId, user);
+
+  return client.userProfile.upsert({
+    where: { clerkUserId: userId },
+    update: {
+      email: fields.email,
+      displayName: fields.displayName,
+      imageUrl: fields.imageUrl,
+    },
+    create: fields,
+  });
+}
+
 export async function ensureCurrentUserProfileFromSources({
   prisma: client,
   readAuth,
@@ -38,17 +53,30 @@ export async function ensureCurrentUserProfileFromSources({
   if (!session.userId) throw new AuthRequiredError();
 
   const user = await readCurrentUser();
-  const fields = profileFieldsFromUser(session.userId, user);
+  return upsertProfileForUser(client, session.userId, user);
+}
 
-  return client.userProfile.upsert({
-    where: { clerkUserId: session.userId },
-    update: {
-      email: fields.email,
-      displayName: fields.displayName,
-      imageUrl: fields.imageUrl,
-    },
-    create: fields,
-  });
+export async function ensureCurrentUserProfileForPageFromSources({
+  prisma: client,
+  readAuth,
+  readCurrentUser,
+  redirectToSignIn,
+}: {
+  prisma: PrismaLike;
+  readAuth: () => Promise<AuthResult>;
+  readCurrentUser: () => Promise<ClerkUserLike | null>;
+  redirectToSignIn: () => never;
+}) {
+  const session = await readAuth();
+  const userId = session.userId;
+  if (!userId) {
+    redirectToSignIn();
+    throw new AuthRequiredError();
+  }
+
+  const user = await readCurrentUser();
+
+  return upsertProfileForUser(client, userId, user);
 }
 
 export async function ensureCurrentUserProfile() {
@@ -59,6 +87,18 @@ export async function ensureCurrentUserProfile() {
       return { userId: session.userId };
     },
     readCurrentUser: currentUser,
+  });
+}
+
+export async function ensureCurrentUserProfileForPage() {
+  return ensureCurrentUserProfileForPageFromSources({
+    prisma,
+    readAuth: async () => {
+      const session = await auth();
+      return { userId: session.userId };
+    },
+    readCurrentUser: currentUser,
+    redirectToSignIn: () => redirect("/sign-in"),
   });
 }
 

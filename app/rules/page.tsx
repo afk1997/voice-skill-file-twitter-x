@@ -1,13 +1,13 @@
 import { GlobalRulesClient } from "@/components/rules/GlobalRulesClient";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ensureCurrentUserProfile } from "@/lib/auth/currentUserProfile";
+import { ensureCurrentUserProfileForPage } from "@/lib/auth/currentUserProfile";
 import { prisma } from "@/lib/db";
 import { listGlobalRules } from "@/lib/rules/ruleBankService";
 
 export const dynamic = "force-dynamic";
 
 export default async function RulesPage() {
-  const profile = await ensureCurrentUserProfile();
+  const profile = await ensureCurrentUserProfileForPage();
   const rules = await listGlobalRules({ prisma, profileId: profile.id });
 
   return (
